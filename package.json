@@ -1,0 +1,17 @@
+{
+  "name": "baithak-pos",
+  "version": "0.1.0",
+  "description": "Orders, kitchen tickets, billing and daily stats for The Baithak Stories",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "express": "^4.21.0",
+    "qrcode": "^1.5.4"
+  }
+}

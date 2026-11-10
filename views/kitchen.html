@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a5a44">
+<link rel="manifest" href="/assets/manifest.webmanifest">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>रसोई</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ body{padding-bottom:calc(30px + env(safe-area-inset-bottom))}
+ .pbtn{background:transparent;border:1.5px solid rgba(255,255,255,.45);color:var(--bar-ink);min-height:42px;padding:4px 14px;border-radius:10px;font-weight:600;white-space:nowrap}
+ .pbtn.ok{border-color:#9be0c2}
+ .pbtn.off{border-color:#f0a99d;background:rgba(190,60,45,.35)}
+ .bar .brand span{font-family:var(--font-hindi-display);font-size:24px;font-weight:600}
+ .sum{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:2px 2px 14px}
+ .sum h2{margin:0;font-family:var(--font-hindi-display);font-size:26px;font-weight:600}
+ .sum span{color:var(--muted);font-size:15px}
+ .alert{border-radius:14px;padding:12px 16px;margin-bottom:14px;font-weight:600;font-size:17px;text-align:center}
+ .alert.snd{width:100%;background:var(--crimson-soft);color:var(--crimson);border:1.5px solid var(--crimson);min-height:56px}
+ .alert.net{background:var(--brass-soft);border:1px solid var(--brass)}
+
+ .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));align-items:start}
+ .kc{background:var(--paper);border:1.5px solid var(--line);border-radius:20px;padding:14px 16px 16px;position:relative}
+ .kc.new{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 35%,transparent);animation:pulse 1.2s ease-in-out infinite}
+ .kc.late{border-color:var(--crimson)}
+ .kc header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+ .kc h2{margin:0;font-family:var(--font-hindi-display);font-size:29px;font-weight:600;line-height:1.2;min-width:0;overflow-wrap:anywhere}
+ .age{flex:none;border-radius:999px;padding:3px 12px;font-weight:700;font-size:16px;background:var(--brand-soft);color:var(--brand)}
+ .slow .age{background:var(--brass-soft);color:var(--brass)}
+ .late .age{background:var(--crimson-soft);color:var(--crimson)}
+ .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 4px;color:var(--muted);font-size:15px}
+ .pill{border-radius:999px;padding:1px 10px;font-weight:700;font-size:14px;background:var(--brass-soft);color:var(--brass)}
+ .pill.fresh{background:var(--brand);color:var(--brand-ink)}
+ .lines{list-style:none;margin:8px 0 6px;padding:0}
+ .lines li{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1.5px dashed var(--line-soft)}
+ .lines li:last-child{border-bottom:0}
+ .lines .q{flex:none;min-width:44px;height:44px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+ .lines .n{font-size:22px;font-weight:600;line-height:1.3;min-width:0}
+ .lines .n small{display:block;font-size:14px;font-weight:400;color:var(--muted)}
+ .lines .v{display:inline-block;margin-left:6px;border-radius:8px;padding:0 8px;font-size:15px;font-weight:700;background:var(--brass-soft);color:var(--brass);vertical-align:middle}
+ .note{margin:8px 0 2px;padding:9px 12px;border-radius:12px;background:var(--brass-soft);border:1px solid color-mix(in srgb,var(--brass) 45%,transparent);font-size:19px;font-weight:600}
+ .rdy{width:100%;margin-top:12px;min-height:64px;font-size:23px;border-radius:16px}
+ .kc.cancel{background:var(--crimson-soft);border-color:var(--crimson)}
+ .kc.cancel .flag{margin:8px 0 2px;font-size:22px;font-weight:800;color:var(--crimson)}
+ .kc.cancel .lines .q{background:transparent;color:var(--crimson);text-decoration:line-through}
+ .kc.cancel .lines .n{text-decoration:line-through;color:var(--muted)}
+ .kc.cancel .age{background:var(--crimson);color:#fff}
+ .empty{padding:56px 12px;text-align:center;color:var(--muted);font-size:19px;line-height:1.6}
+ .done{margin-top:26px}
+ .done summary{cursor:pointer;font-family:var(--font-hindi-display);font-size:21px;font-weight:600;padding:10px 2px;min-height:46px}
+ .drow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line-soft)}
+ .drow b{font-size:18px}.drow small{display:block;color:var(--muted);font-size:14px}
+
+ .gate{position:fixed;inset:0;z-index:90;background:var(--ground);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:28px;text-align:center}
+ .gate .logo{width:min(150px,38vw);aspect-ratio:900/1077;background:var(--logo);-webkit-mask:url(/assets/brand/logo-green.png) center/contain no-repeat;mask:url(/assets/brand/logo-green.png) center/contain no-repeat}
+ .gate h1{margin:0;font-family:var(--font-hindi-display);font-size:30px;font-weight:600}
+ .gate p{margin:0;max-width:30ch;color:var(--muted);font-size:18px;line-height:1.55}
+ .gate button{min-height:64px;font-size:22px;padding:0 28px;border-radius:18px}
+ @keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--brand) 12%,transparent)}}
+ @media(prefers-reduced-motion:reduce){.kc.new{animation:none}}
+ @media(max-width:420px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/kitchen"><img src="/assets/brand/mark-cream.png" alt="" width="38" height="38"><span>रसोई</span></a>
+  <div class="tools">
+    <button id="snd" class="pbtn">आवाज़</button>
+    <a id="toCounter" href="/counter" class="hidden">काउंटर</a>
+  </div>
+  <div class="icons">
+    <button class="iconbtn" data-look-btn aria-label="रंग-रूप बदलें"></button>
+    <button class="iconbtn" data-theme-btn aria-label="थीम बदलें"></button>
+    <button class="iconbtn" id="logoutBtn" aria-label="बाहर जाएँ"></button>
+  </div>
+</header>
+<main>
+  <div id="warn"></div>
+  <div id="app"></div>
+</main>
+<div id="gate" class="gate">
+  <div class="logo" role="img" aria-label="{{name}}"></div>
+  <h1>रसोई स्क्रीन</h1>
+  <p>फ़ोन की आवाज़ बढ़ा लें। नया ऑर्डर आते ही घंटी बजेगी। स्क्रीन चालू रखें।</p>
+  <button class="primary" id="start">शुरू करें</button>
+</div>
+<div id="toast"></div>
+
+<script src="/assets/common.js?v={{v}}"></script>
+<script src="/assets/chime.js?v={{v}}"></script>
+<script>
+let ME, WAIT = [], DONE = [], known = null, clockSkew = 0, netOk = true, doneOpen = false, awake = null, started = false;
+const seen = new Set();               // tickets the cook has looked at (tapped). Unseen ones keep reminding.
+const $ = s => document.querySelector(s);
+const now = () => Date.now() + clockSkew;
+const where = k => k.order.type === 'dine_in' ? 'टेबल ' + k.order.table_no : 'पार्सल #' + k.order.day_no + (k.order.customer ? ' · ' + k.order.customer : '');
+const age = k => Math.max(0, Math.floor((now() - k.created_at) / 60000));
+const ageText = m => m < 1 ? 'अभी' : m + ' मिनट';
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+
+function lines(k) {
+  return '<ul class="lines">' + k.items.map(i => `<li><span class="q">${i.qty}</span><span class="n">${esc(i.name_hi)}${i.variant_hi ? `<span class="v">${esc(i.variant_hi)}</span>` : ''}<small>${esc(i.name)}${i.variant ? ' · ' + esc(i.variant) : ''}</small></span></li>`).join('') + '</ul>';
+}
+function card(k) {
+  const m = age(k), unseen = !seen.has(k.id);
+  const cls = (m >= 20 ? 'late' : m >= 10 ? 'slow' : '') + (unseen ? ' new' : '');
+  if (k.kind === 'cancel') {
+    return `<article class="kc cancel ${unseen ? 'new' : ''}" data-k="${k.id}"><header><h2>${esc(where(k))}</h2><span class="age">रद्द</span></header>
+      <div class="flag">इन्हें न बनाएँ</div>${lines(k)}${k.note ? `<div class="note">${esc(k.note)}</div>` : ''}
+      <button class="rdy" data-ready="${k.id}">देख लिया</button></article>`;
+  }
+  return `<article class="kc ${cls}" data-k="${k.id}"><header><h2>${esc(where(k))}</h2><span class="age">${ageText(m)}</span></header>
+    <div class="meta"><span>${timeStr(k.created_at)} को आया</span>${k.is_add ? '<span class="pill">और आइटम जुड़े</span>' : ''}${unseen ? '<span class="pill fresh">नया</span>' : ''}</div>
+    ${lines(k)}${k.note ? `<div class="note">${esc(k.note)}</div>` : ''}
+    <button class="primary rdy" data-ready="${k.id}">तैयार ✔</button></article>`;
+}
+function render() {
+  const unseen = WAIT.filter(k => !seen.has(k.id)).length;
+  document.title = (unseen ? '(' + unseen + ') नया ऑर्डर · ' : '') + 'रसोई';
+  const sound = CHIME.running();
+  $('#snd').textContent = sound ? '🔊 आवाज़ चालू' : '🔇 आवाज़ बंद';
+  $('#snd').className = 'pbtn ' + (sound ? 'ok' : 'off');
+  $('#warn').innerHTML = (started && !sound ? '<button class="alert snd" id="sndFix">आवाज़ बंद है। नया ऑर्डर पता नहीं चलेगा। चालू करने के लिए यहाँ दबाएँ</button>' : '') +
+    (!netOk ? '<div class="alert net">नेट नहीं है। दोबारा जुड़ने की कोशिश हो रही है। यह सूची पुरानी हो सकती है।</div>' : '');
+  const open = document.querySelector('.done') ? document.querySelector('.done').open : doneOpen;
+  doneOpen = open;
+  let h = `<div class="sum"><h2>${WAIT.length ? WAIT.length + ' ऑर्डर बाकी' : 'सब तैयार'}</h2><span>पुराना ऑर्डर सबसे ऊपर</span></div>`;
+  h += WAIT.length ? '<div class="grid">' + WAIT.map(card).join('') + '</div>'
+    : '<div class="empty">अभी कोई ऑर्डर नहीं है।<br>नया ऑर्डर आते ही घंटी बजेगी।</div>';
+  if (DONE.length) {
+    h += `<details class="done" ${open ? 'open' : ''}><summary>अभी तैयार किए गए (${DONE.length})</summary>` + DONE.map(k =>
+      `<div class="drow"><span><b>${esc(where(k))}</b><small>${k.items.map(i => i.qty + ' × ' + esc(i.name_hi)).join(', ')}</small></span><button data-undo="${k.id}">वापस लाएँ</button></div>`).join('') + '</details>';
+  }
+  $('#app').innerHTML = h;
+}
+
+// ---------- loading + alerts ----------
+async function load() {
+  try {
+    const r = await api('/api/kitchen');
+    netOk = true; clockSkew = r.now - Date.now();
+    const ids = new Set(r.waiting.map(k => k.id));
+    if (known === null) r.waiting.forEach(k => seen.add(k.id));       // what is already here when the page opens is not "new"
+    else {
+      const fresh = r.waiting.filter(k => !known.has(k.id));
+      if (fresh.length) { fresh.forEach(k => seen.delete(k.id)); ring(fresh); }
+    }
+    known = ids; WAIT = r.waiting; DONE = r.done;
+  } catch (e) { if (e.message === 'login') return; netOk = false; }
+  render();
+}
+function ring(list) {
+  const cancels = list.some(k => k.kind === 'cancel'), orders = list.some(k => k.kind !== 'cancel');
+  buzz([400, 150, 400, 150, 400]);
+  if (orders) CHIME.play('new');
+  if (cancels) setTimeout(() => CHIME.play('cancel'), orders ? 1900 : 0);
+}
+// until someone taps a ticket, ring again every 30 seconds
+setInterval(() => {
+  const un = WAIT.filter(k => !seen.has(k.id));
+  if (un.length && CHIME.running()) { CHIME.play(un.some(k => k.kind !== 'cancel') ? 'new' : 'cancel'); buzz([300, 120, 300]); }
+}, 30000);
+setInterval(() => { if (!document.hidden) load(); }, 15000);   // safety net in case a live update is missed
+setInterval(render, 20000);                                      // keeps the minutes counting up
+
+// ---------- keep the screen on ----------
+async function keepAwake() {
+  try { if (navigator.wakeLock && !awake) { awake = await navigator.wakeLock.request('screen'); awake.addEventListener('release', () => { awake = null; }); } } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { keepAwake(); CHIME.unlock().then(render); } });
+
+// ---------- taps ----------
+async function markReady(id) {
+  seen.add(id);
+  WAIT = WAIT.filter(k => k.id !== id); render();
+  try {
+    await api(`/api/kots/${id}/ready`, { method: 'POST', body: {} });
+    toast('तैयार हो गया', { action: { label: 'वापस लाएँ', fn: () => undo(id) } });
+  } catch (e) { toast(e.message, true); }
+  load();
+}
+async function undo(id) {
+  seen.add(id); if (known) known.add(id);                         // our own undo should not ring the bell
+  try { await api(`/api/kots/${id}/undo-ready`, { method: 'POST', body: {} }); } catch (e) { toast(e.message, true); }
+  load();
+}
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('#sndFix') || t.closest('#snd')) {
+    CHIME.unlock().then(ok => { if (ok) CHIME.play('test'); render(); keepAwake(); });
+    return;
+  }
+  const r = t.closest('[data-ready]'); if (r) return markReady(+r.dataset.ready);
+  const u = t.closest('[data-undo]'); if (u) return undo(+u.dataset.undo);
+  const c = t.closest('[data-k]');
+  if (c && !seen.has(+c.dataset.k)) { seen.add(+c.dataset.k); render(); }
+});
+
+async function init() {
+  $('#logoutBtn').innerHTML = ICON.out; $('#logoutBtn').onclick = logout; mountThemeButtons();
+  ME = await api('/api/me');
+  if (ME.role !== 'kitchen') $('#toCounter').classList.remove('hidden');
+  $('#start').onclick = async () => {
+    const ok = await CHIME.unlock();
+    started = true; $('#gate').remove();
+    if (ok) CHIME.play('test');
+    keepAwake(); render();
+  };
+  await load();
+  live(ev => load());
+}
+init().catch(e => { if (e.message !== 'login') { $('#app').innerHTML = '<div class="empty">पेज लोड नहीं हो पाया।<br>नेट देखें और पेज रीफ्रेश करें।</div>'; } });
+</script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a5a44">
+<link rel="manifest" href="/assets/manifest.webmanifest">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>Menu – {{name}}</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ .bar{justify-content:space-between}
+ .bar .lang{background:transparent;border:1.5px solid color-mix(in srgb,var(--bar-ink) 50%,transparent);color:var(--bar-ink);min-height:40px;padding:2px 14px;border-radius:999px;margin-right:4px}
+ .hero{text-align:center;padding:10px 0 4px}
+ .hero h1{margin:0;font-family:var(--font-display);font-weight:var(--display-weight);font-size:clamp(34px,7vw,52px);line-height:1.15}
+ .hero p{margin:4px 0 0;color:var(--muted)}
+ .tablebox{margin:14px auto 0;max-width:560px;text-align:center;font-weight:600}
+ .find{position:sticky;top:58px;z-index:10;background:var(--ground);margin:12px -14px 0;padding:10px 14px 0}
+ .field{position:relative;max-width:640px;margin:0 auto}
+ .field svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+ .field input{padding-left:46px;border-radius:14px;font-size:18px}
+ .tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin:6px -14px 0;padding:0 8px}
+ .tabs::-webkit-scrollbar{display:none}
+ .tabs button{border:0;background:transparent;border-radius:0;min-height:50px;padding:0 13px;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent;font-size:17px;font-weight:600}
+ .tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+ .cat{margin-top:26px}
+ .cat h2{margin:0 0 4px;font-family:var(--font-display);font-weight:var(--display-weight);font-size:28px;color:var(--brand)}
+ .items{column-width:340px;column-gap:36px}
+ .mi{padding:12px 2px;border-bottom:1px solid var(--line-soft);break-inside:avoid}
+ .mi.off{opacity:.55}
+ .mi-top{display:flex;align-items:flex-end;gap:8px}
+ .mi-name{min-width:0;flex:0 1 auto}
+ .mi-name .a{display:block;font-size:20px;font-weight:600;line-height:1.3}
+ .mi-name .b{display:block;font-size:14px;color:var(--muted);line-height:1.3}
+ .leader{flex:1 1 12px;min-width:0;border-bottom:2px dotted var(--line);margin-bottom:10px}
+ .price{font-weight:700;font-size:19px;white-space:nowrap;font-variant-numeric:tabular-nums;margin-bottom:3px}
+ .out{font-size:14px;font-weight:600;color:var(--crimson);margin-bottom:3px;white-space:nowrap}
+ .vs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+ .vs span{border:1.5px solid var(--line);border-radius:999px;padding:3px 14px;font-weight:600;background:var(--paper)}
+ .vs span b{font-variant-numeric:tabular-nums;margin-left:4px}
+ .vs span.off{opacity:.5}
+ .empty{padding:40px 8px;text-align:center;color:var(--muted)}
+ .note{margin:34px auto 0;max-width:560px;text-align:center;padding:16px 18px;background:var(--paper);border:1px solid var(--line);border-radius:18px}
+ .note b{display:block;font-family:var(--font-hindi-display);font-size:20px;margin-bottom:2px}
+ main{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/?choose"><img src="/assets/brand/mark-cream.png" alt="" width="38" height="38"><span><i class="the">The </i>Baithak Stories</span></a>
+  <div class="icons">
+    <button class="lang" id="lang" aria-label="Change language">English</button>
+    <button class="iconbtn" data-theme-btn aria-label="Light or dark"></button>
+  </div>
+</header>
+<main>
+  <section class="hero"><h1 id="title">हमारा मेन्यू</h1><p id="sub"></p></section>
+  <div class="tablebox card hidden" id="tablebox"></div>
+  <div class="find"><div class="field" id="field"></div><div class="tabs" id="tabs"></div></div>
+  <div id="list"></div>
+  <div class="note" id="note"></div>
+</main>
+<script src="/assets/common.js?v={{v}}"></script>
+<script>
+mountThemeButtons();
+const T = {
+  hi: { title: 'हमारा मेन्यू', search: 'मेन्यू में खोजें', all: 'सभी', none: 'इस नाम का कुछ नहीं मिला। दूसरा नाम खोजें।', out: 'आज उपलब्ध नहीं', lang: 'English',
+        table: n => `आप टेबल ${n} पर हैं। ऑर्डर देने के लिए अपने वेटर को बुलाएँ।`, order: 'ऑर्डर देने के लिए अपने वेटर को बताएँ।', ph: 'फ़ोन', load: 'मेन्यू लोड नहीं हो पाया। पेज को रीफ्रेश करें।' },
+  en: { title: 'Our menu', search: 'Search the menu', all: 'All', none: 'Nothing matches that. Try another name.', out: 'Not available today', lang: 'हिंदी',
+        table: n => `You are at table ${n}. Call your waiter when you are ready to order.`, order: 'Tell your waiter what you would like.', ph: 'Phone', load: 'The menu could not load. Refresh the page.' },
+};
+let lang = 'hi'; try { lang = localStorage.getItem('lang') || 'hi'; } catch (e) {}
+let DATA = null, tab = 'all', q = '';
+const $ = s => document.querySelector(s);
+const table = new URLSearchParams(location.search).get('table');
+
+function groups() {
+  const map = new Map();
+  DATA.items.forEach(m => {
+    const k = m.category + '|' + m.name;
+    if (!map.has(k)) map.set(k, { category: m.category, category_hi: m.category_hi, name: m.name, name_hi: m.name_hi, vars: [] });
+    map.get(k).vars.push(m);
+  });
+  return [...map.values()];
+}
+const cats = () => { const out = []; DATA.items.forEach(m => { if (!out.find(c => c.en === m.category)) out.push({ en: m.category, hi: m.category_hi }); }); return out; };
+const pri = (i, k) => lang === 'hi' ? i[k + '_hi'] : i[k], sec = (i, k) => lang === 'hi' ? i[k] : i[k + '_hi'];
+const vlabel = v => lang === 'hi' ? v.variant_hi : v.variant;
+
+function itemHtml(i) {
+  const allOff = i.vars.every(v => !v.available);
+  const names = `<div class="mi-name"><span class="a">${esc(lang === 'hi' ? i.name_hi : i.name)}</span><span class="b">${esc(lang === 'hi' ? i.name : i.name_hi)}</span></div>`;
+  if (i.vars.length === 1 && !i.vars[0].variant) {
+    const v = i.vars[0];
+    return `<div class="mi ${v.available ? '' : 'off'}"><div class="mi-top">${names}<span class="leader"></span>${v.available ? `<span class="price">${rupee(v.price)}</span>` : `<span class="out">${T[lang].out}</span>`}</div></div>`;
+  }
+  return `<div class="mi ${allOff ? 'off' : ''}"><div class="mi-top">${names}${allOff ? `<span class="leader"></span><span class="out">${T[lang].out}</span>` : ''}</div>${allOff ? '' : '<div class="vs">' + i.vars.map(v => `<span class="${v.available ? '' : 'off'}">${esc(vlabel(v))}<b>${v.available ? rupee(v.price) : '–'}</b></span>`).join('') + '</div>'}</div>`;
+}
+function render() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  $('#title').textContent = t.title; $('#lang').textContent = t.lang;
+  $('#sub').textContent = DATA.restaurant;
+  $('#field').innerHTML = `${ICON.search}<input id="search" type="search" placeholder="${esc(t.search)}" value="${esc(q)}" autocomplete="off" aria-label="${esc(t.search)}">`;
+  $('#field input').addEventListener('input', e => { q = e.target.value; renderTabs(); renderList(); });
+  if (table && /^\d{1,3}$/.test(table)) { $('#tablebox').textContent = t.table(table); $('#tablebox').classList.remove('hidden'); }
+  $('#note').innerHTML = `<b>${t.order}</b>${t.ph}: ${esc(DATA.phone)}`;
+  renderTabs(); renderList();
+}
+function renderTabs() {
+  const c = cats();
+  $('#tabs').innerHTML = [{ id: 'all', label: T[lang].all }, ...c.map(x => ({ id: x.en, label: lang === 'hi' ? x.hi : x.en }))]
+    .map(x => `<button data-tab="${esc(x.id)}" class="${!q.trim() && x.id === tab ? 'on' : ''}">${esc(x.label)}</button>`).join('');
+}
+function renderList() {
+  const s = q.trim().toLowerCase();
+  let items = groups();
+  if (s) items = items.filter(i => i.name.toLowerCase().includes(s) || i.name_hi.includes(s) || i.category.toLowerCase().includes(s) || i.category_hi.includes(s));
+  else if (tab !== 'all') items = items.filter(i => i.category === tab);
+  if (!items.length) { $('#list').innerHTML = `<div class="empty">${T[lang].none}</div>`; return; }
+  const by = new Map(); items.forEach(i => { if (!by.has(i.category)) by.set(i.category, []); by.get(i.category).push(i); });
+  $('#list').innerHTML = [...by.entries()].map(([c, list]) => {
+    const meta = cats().find(x => x.en === c);
+    return `<section class="cat"><h2>${esc(lang === 'hi' ? meta.hi : meta.en)}</h2><div class="items">${list.map(itemHtml).join('')}</div></section>`;
+  }).join('');
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; q = ''; $('#search').value = ''; renderTabs(); renderList(); window.scrollTo({ top: 0 }); });
+$('#lang').onclick = () => { lang = lang === 'hi' ? 'en' : 'hi'; try { localStorage.setItem('lang', lang); } catch (e) {} render(); };
+fetch('/api/public/menu').then(r => r.json()).then(d => { DATA = d; render(); })
+  .catch(() => { $('#list').innerHTML = `<div class="empty">${T[lang].load}</div>`; });
+</script>
+</body>
+</html>

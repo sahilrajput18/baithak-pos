@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a5a44">
+<link rel="manifest" href="/assets/manifest.webmanifest">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>{{name}}</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+ .corner{display:flex;justify-content:flex-end;padding:10px 10px 0}
+ .corner button{background:transparent;border:0;min-height:44px;min-width:44px;padding:0;display:grid;place-items:center;border-radius:12px;color:var(--muted)}
+ .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:4px 18px 28px}
+ .logo{width:min(210px,50vw);aspect-ratio:900/1077;background:var(--logo);-webkit-mask:url(/assets/brand/logo-green.png) center/contain no-repeat;mask:url(/assets/brand/logo-green.png) center/contain no-repeat}
+ .lead{font-family:var(--font-hindi-display);font-size:25px;font-weight:600;text-align:center;margin:0;line-height:1.3}
+ .lead small{display:block;font-family:var(--font-body);font-size:15px;color:var(--muted);font-weight:400;margin-top:2px}
+ .doors{display:grid;gap:14px;width:min(980px,100%)}
+ .door{display:flex;align-items:center;gap:16px;text-decoration:none;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:22px;padding:16px 18px;min-height:96px;transition:border-color .12s,transform .06s}
+ .door:hover{border-color:var(--brand)}
+ .door:active{transform:scale(.985)}
+ .door .ic{flex:none;width:58px;height:58px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center}
+ .door .tx{min-width:0}
+ .door b{display:block;font-family:var(--font-hindi-display);font-size:25px;font-weight:600;line-height:1.2}
+ .door .en{display:block;font-weight:600;color:var(--brand);font-size:17px}
+ .door small{display:block;color:var(--muted);font-size:15px;margin-top:2px}
+ .foot{text-align:center;color:var(--muted);font-size:15px;padding:0 18px calc(22px + env(safe-area-inset-bottom))}
+ /* four doors, shaped like the arch in the logo */
+ @media(min-width:760px){
+  .stage{gap:34px}
+  .logo{width:min(190px,22vh)}
+  .doors{grid-template-columns:repeat(4,1fr);gap:20px}
+  .door{flex-direction:column;justify-content:flex-end;text-align:center;aspect-ratio:3/4;border-radius:999px 999px 22px 22px;padding:0 20px 34px;gap:14px}
+  .door .ic{width:76px;height:76px}
+  .door b{font-size:26px}
+ }
+</style>
+</head>
+<body>
+<div class="corner">
+  <button data-look-btn aria-label="रंग-रूप बदलें"></button>
+  <button data-theme-btn aria-label="थीम बदलें"></button>
+</div>
+<main class="stage">
+  <div class="logo" role="img" aria-label="{{name}}"></div>
+  <h1 class="lead">आप कौन हैं?<small>Who are you?</small></h1>
+  <nav class="doors" aria-label="Choose how to enter">
+    <a class="door" href="/login?as=waiter">
+      <span class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16v-5a6 6 0 10-12 0v5l-2 2h16l-2-2zM10 21h4"/></svg></span>
+      <span class="tx"><b>वेटर</b><span class="en">Waiter</span><small>ऑर्डर लें</small></span>
+    </a>
+    <a class="door" href="/login?as=kitchen">
+      <span class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14a4 4 0 01-.5-7.9A5 5 0 0116.4 5 4.5 4.5 0 0117 14M7 14v6h10v-6M7 17h10"/></svg></span>
+      <span class="tx"><b>रसोई</b><span class="en">Kitchen</span><small>ऑर्डर देखें</small></span>
+    </a>
+    <a class="door" href="/login?as=admin">
+      <span class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span>
+      <span class="tx"><b>एडमिन</b><span class="en">Admin</span><small>काउंटर और मालिक</small></span>
+    </a>
+    <a class="door" href="/menu">
+      <span class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-2-8-1.5V18c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.5 12 6zM12 6v13.5"/></svg></span>
+      <span class="tx"><b>ग्राहक</b><span class="en">Customer</span><small>बिना लॉगिन के मेन्यू देखें</small></span>
+    </a>
+  </nav>
+</main>
+<p class="foot">फ़ोन {{phone}}</p>
+<script src="/assets/common.js?v={{v}}"></script>
+<script>mountThemeButtons();</script>
+</body>
+</html>

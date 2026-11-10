@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a5a44">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>Counter – The Baithak Stories</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ html{font-size:16px}
+ .pbtn{background:transparent;border:1.5px solid rgba(255,255,255,.45);color:var(--bar-ink);min-height:42px;padding:4px 14px;border-radius:10px;font-weight:600}
+ .pbtn.ok{border-color:#9be0c2}
+ .toggle{display:flex;align-items:center;gap:8px;color:var(--bar-ink);font-weight:600;padding:0 6px}
+ .toggle input{width:20px;height:20px}
+ .layout{display:grid;grid-template-columns:minmax(290px,370px) 1fr;gap:20px;align-items:start}
+ @media(max-width:820px){.layout{grid-template-columns:1fr}}
+ .overlay .box h3{font-family:var(--font-body);font-size:17px;font-weight:600;line-height:1.45;word-break:break-word}
+ h2{font-family:var(--font-display);font-size:25px;font-weight:var(--display-weight);margin:0 2px 12px}
+ h2 small{font-family:var(--font-body);font-size:15px;color:var(--muted);font-weight:400;margin-left:6px}
+ .ocard{display:block;width:100%;text-align:left;margin-bottom:10px;padding:12px 14px;font-weight:400;font-size:16px;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;cursor:pointer}
+ .ocard:hover{border-color:var(--brand)}
+ .qacts{margin-top:8px;display:flex;gap:8px}
+ .qacts button{min-height:36px;padding:2px 12px;font-size:14px}
+ .ocard.sel{border-color:var(--brand);box-shadow:inset 0 0 0 1.5px var(--brand)}
+ .ocard .top{display:flex;justify-content:space-between;gap:8px;font-size:18px}
+ .ocard .sub{margin-top:2px;color:var(--muted);font-size:14px}
+ .line{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+ .line.gone{text-decoration:line-through;color:var(--muted)}
+ .line .nm{flex:1}
+ .kothead{font-size:14px;color:var(--muted);margin:14px 0 2px;display:flex;align-items:center;gap:6px}
+ .paybtns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+ .paybtns button{min-height:56px;font-size:18px}
+ .row2{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+ .grand{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--font-display);font-size:34px;font-weight:var(--display-weight);padding:14px 0 6px}
+ .warn{background:var(--brass-soft);border:1px solid color-mix(in srgb,var(--brass) 40%,transparent);border-radius:12px;padding:10px 14px;margin-top:10px}
+ .det h2{margin:0}
+ .awaitbox{background:var(--brass-soft);border:1.5px solid var(--brass);border-radius:14px;padding:12px 14px;margin-bottom:18px}
+ .awaitbox b.t{display:block;font-size:17px;margin-bottom:2px}
+ .awaitbox .aw{padding:8px 0;border-top:1px solid color-mix(in srgb,var(--brass) 35%,transparent)}
+ .awaitbox .aw:first-of-type{border-top:0}
+ .awaitbox .ab{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+ .awaitbox .ab button{min-height:46px}
+ .awaitbox .ab .wide,.paybtns .wide{grid-column:1/-1}
+ .empty{padding:28px 8px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/counter"><img src="/assets/brand/mark-cream.png" alt="" width="38" height="38"><span>Counter</span></a>
+  <div class="tools">
+    <button id="prn" class="pbtn">Printer: not connected</button>
+    <label class="toggle"><input type="checkbox" id="auto"> Auto-print bill</label>
+    <a href="/kitchen">Kitchen</a>
+    <a href="/waiter">New order</a>
+    <a id="ownerLink" href="/owner" class="hidden">Dashboard</a>
+  </div>
+  <div class="icons">
+    <button class="iconbtn" data-look-btn aria-label="Change look"></button>
+    <button class="iconbtn" data-theme-btn aria-label="Switch theme"></button>
+    <button class="iconbtn" id="logoutBtn" aria-label="Log out"></button>
+  </div>
+</header>
+<main>
+  <div class="layout">
+    <div>
+      <div id="await"></div>
+      <h2>Open orders<small id="openCount"></small></h2>
+      <p class="muted" style="margin:-6px 2px 12px;font-size:14px">Every order sent by a waiter shows up here by itself. Open it to print the bill.</p>
+      <div id="open"></div>
+      <h2 style="margin-top:26px">Paid today</h2>
+      <div id="paid"></div>
+    </div>
+    <div id="detail"><div class="card empty">Pick an order from the list to see its items and take payment.</div></div>
+  </div>
+</main>
+<div id="toast"></div>
+<script src="/assets/common.js?v={{v}}"></script>
+<script src="/assets/printer.js?v={{v}}"></script>
+<script src="/assets/chime.js?v={{v}}"></script>
+<script>
+let ME, OPEN = [], PAID = [], sel = null;
+const $ = s => document.querySelector(s);
+const label = o => o.type === 'dine_in' ? 'Table ' + o.table_no : 'Parcel #' + o.day_no + (o.customer ? ' · ' + o.customer : '');
+const mins = ms => Math.max(1, Math.round((Date.now() - ms) / 60000));
+const nm = i => i.name_hi + (i.variant_hi ? ' (' + i.variant_hi + ')' : '') + ' · ' + i.name + (i.variant ? ' ' + i.variant : '');
+const REASONS = ['Customer refused', 'Wrong entry', 'Item not available', 'Too late'];
+let autoPrint = true;
+try { autoPrint = localStorage.getItem('autoPrint') !== '0'; } catch (e) {}
+
+// ---------- printing (80mm thermal; Chrome shortcut with --kiosk-printing skips the print dialog) ----------
+let printQueue = Promise.resolve();
+function printHtml(body, opts) {
+  printQueue = printQueue.then(() => new Promise(done => {
+    const f = document.createElement('iframe');
+    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    document.body.appendChild(f);
+    const d = f.contentWindow.document;
+    const paper = PRINTER.dots === 576 ? { page: 80, body: 74 } : { page: 58, body: 50 };
+    const wmOn = opts && opts.watermark && PRINTER.billLogo > 0;
+    d.open();
+    d.write(`<!doctype html><html><head><meta charset="utf-8"><style>
+      @page{size:${paper.page}mm auto;margin:0}
+      body{margin:0;padding:2mm;width:${paper.body}mm;font:12px/1.35 "Noto Sans Devanagari","Segoe UI",Arial,sans-serif;color:#000}
+      .c{text-align:center}.big{font-size:20px;font-weight:700}.mid{font-size:16px}.b{font-weight:700}
+      hr{border:0;border-top:1px dashed #000;margin:5px 0}
+      .it{margin:4px 0}.it .h{font-size:16px;font-weight:700}.it small{display:block;font-size:11px}
+      table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}td.r{text-align:right;white-space:nowrap}
+      .tot td{font-weight:700;font-size:14px}
+      ${wmOn ? `body{position:relative;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body::before{content:"";position:absolute;inset:0;background:url(/assets/brand/logo-green.png) center center/88% auto no-repeat;opacity:${(PRINTER.billLogo * 0.8).toFixed(2)};z-index:-1}` : ''}
+    </style></head><body>${body}</body></html>`);
+    d.close();
+    setTimeout(() => {
+      try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) {}
+      setTimeout(() => { f.remove(); done(); }, 1500);
+    }, wmOn ? 900 : 300);
+  }));
+  return printQueue;
+}
+function billHtml(o) {
+  const items = o.items.filter(i => i.status !== 'voided');
+  const fin = !!o.bill_no && !!o.subtotal;                    // an issued bill has locked figures; the sample bill does not
+  const sub = fin ? o.subtotal : o.running_total, total = fin ? o.total : sub;
+  const where = o.type === 'dine_in' ? 'Table ' + o.table_no : 'Parcel' + (o.customer ? ' – ' + esc(o.customer) : '');
+  return `<div class="c big">${esc(ME.restaurant)}</div><div class="c">Ph: ${esc(ME.phone)}</div><hr>
+    <div>${o.bill_no ? 'Bill no: <b>' + o.bill_no + '</b>' : '<b>SAMPLE BILL</b>'}</div>
+    <div>${dateStr(o.paid_at || o.bill_issued_at || Date.now())} ${timeStr(o.paid_at || o.bill_issued_at || Date.now())}</div><div>${where} · Order #${o.day_no}</div><hr>
+    <table>${items.map(i => `<tr><td>${esc(i.name)}${i.variant ? ' (' + esc(i.variant) + ')' : ''}<br>${i.qty} × ${i.price}</td><td class="r">${i.qty * i.price}</td></tr>`).join('')}</table><hr>
+    <table><tr><td>Subtotal</td><td class="r">${sub}</td></tr>
+    ${o.discount ? `<tr><td>Discount</td><td class="r">-${o.discount}</td></tr>` : ''}
+    ${o.tax ? `<tr><td>Tax (${ME.taxPercent}%)</td><td class="r">${o.tax}</td></tr>` : ''}
+    <tr class="tot"><td>TOTAL</td><td class="r">₹${total}</td></tr>
+    ${o.pay_mode === 'split' ? `<tr><td>Paid: Cash</td><td class="r">${o.pay_cash}</td></tr><tr><td>Paid: Online</td><td class="r">${o.pay_online}</td></tr>` : o.pay_mode ? `<tr><td>Paid by</td><td class="r">${o.pay_mode.toUpperCase()}</td></tr>` : ''}</table><hr>
+    <div class="c">धन्यवाद! फिर पधारें<br>Thank you, visit again</div>`;
+}
+// one place decides how to print: straight to the connected printer, otherwise the normal browser print
+async function printOut(html, opts) {
+  if (PRINTER.connected) {
+    try { await PRINTER.print(html, opts); return; }
+    catch (e) { toast('Printer problem: ' + e.message, true); throw e; }
+  }
+  return printHtml(html, opts);
+}
+// Print = issue the bill (gets its number, amount locked). The next bill is blocked until the last one is ticked Cash / UPI / Card.
+async function printBill(id, discount) {
+  const o = OPEN.concat(PAID).find(x => x.id === id);
+  if (!o) return;
+  let bill = o;
+  if (o.status === 'open') {
+    try { bill = (await api(`/api/orders/${id}/bill`, { body: { discount } })).order; }
+    catch (e) {
+      if (e.status === 409 && e.data && e.data.blocking) return markFirst(e.data.blocking, () => printBill(id, discount));
+      throw e;
+    }
+    await loadAll();
+  }
+  await printOut(billHtml(bill), { watermark: true });
+}
+// what the guest will be charged, as far as this screen knows (the server works out the real figure)
+function totalFor(o, disc) {
+  if (o.bill_issued_at) return o.total;
+  const sub = Math.max(0, o.running_total - (Number(disc) || 0));
+  return sub + Math.round(sub * (ME.taxPercent || 0) / 100);
+}
+// small dialog: how much of the bill was cash? the rest is online
+function askSplit(total) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'overlay still';
+    ov.innerHTML = `<div class="box"><h3>Cash + online</h3><p class="muted" style="margin:0 0 10px">Bill total <b>${rupee(total)}</b>. How much was paid in cash? The rest counts as online (UPI).</p>
+      <input id="splitCash" type="number" inputmode="numeric" min="1" max="${total - 1}" placeholder="Cash amount in ₹" style="font-size:22px;min-height:56px">
+      <div id="splitRest" class="muted" style="margin:10px 2px;font-size:18px;min-height:1.6em"></div>
+      <button class="primary opt" id="splitOk" disabled>Confirm</button><button class="opt ghost" id="splitNo">Cancel</button></div>`;
+    document.body.appendChild(ov);
+    const inp = ov.querySelector('#splitCash'), rest = ov.querySelector('#splitRest'), ok = ov.querySelector('#splitOk');
+    const done = v => { ov.remove(); resolve(v); };
+    inp.addEventListener('input', () => {
+      const c = Number(inp.value), valid = Number.isInteger(c) && c >= 1 && c < total;
+      ok.disabled = !valid;
+      rest.innerHTML = valid ? `Cash <b>${rupee(c)}</b> + Online <b>${rupee(total - c)}</b>` : (inp.value ? 'Enter a whole amount between 1 and ' + (total - 1) : '');
+    });
+    ok.onclick = () => done(Number(inp.value));
+    ov.querySelector('#splitNo').onclick = () => done(null);
+    ov.addEventListener('click', e => { if (e.target === ov) done(null); });
+    inp.focus();
+  });
+}
+// ticks how an order was paid. Returns the server reply, or null if the counter backed out of the split dialog.
+async function payFlow(id, mode) {
+  const o = OPEN.find(x => x.id === id);
+  if (!o) return null;
+  const dv = sel === id ? document.getElementById('disc')?.value : undefined;
+  const body = { mode, discount: dv === undefined || dv === '' ? undefined : Number(dv) };
+  if (mode === 'split') {
+    const c = await askSplit(totalFor(o, body.discount));
+    if (c === null) return null;
+    body.cash = c;
+  }
+  return api(`/api/orders/${id}/pay`, { body });
+}
+const PAY_OPTS = [{ label: 'Cash', value: 'cash' }, { label: 'UPI', value: 'upi' }, { label: 'Card', value: 'card' }, { label: 'Cash + online (part of each)', value: 'split' }];
+async function markFirst(b, then) {
+  const v = await pick(label(b) + ', ' + rupee(b.total) + ': bill ' + b.bill_no + ' was printed but not marked paid. How did the guest pay? Tick it, then the next bill can print.', PAY_OPTS);
+  if (!v) return;
+  const r = await payFlow(b.id, v);
+  if (!r) return markFirst(b, then);          // backed out of the split amount: ask again
+  toast('Marked ' + payText(r.order) + ' for ' + label(b));
+  await loadAll();
+  if (then) await then();
+}
+function showPrinter() {
+  const b = $('#prn');
+  b.textContent = PRINTER.connected ? 'Printer: ' + PRINTER.name : 'Printer: not connected';
+  b.className = 'pbtn' + (PRINTER.connected ? ' ok' : '');
+}
+const LOGO_LEVELS = [{ v: 0, label: 'Off' }, { v: 0.2, label: 'Light' }, { v: 0.3, label: 'Medium' }, { v: 0.5, label: 'Strong' }];
+const logoName = () => (LOGO_LEVELS.find(l => l.v === PRINTER.billLogo) || LOGO_LEVELS[2]).label;
+function sampleBill() {
+  const it = (name, name_hi, variant, variant_hi, price, qty) => ({ status: 'active', name, name_hi, variant, variant_hi, price, qty });
+  const items = [it('Butter Chicken', 'बटर चिकन', 'Full', 'फुल', 349, 1), it('Butter Naan', 'बटर नान', '', '', 50, 4), it('Tomato Soup', 'टमाटर सूप', '', '', 89, 2), it('Chicken Dum Biryani', 'चिकन दम बिरयानी', 'Half', 'हाफ', 199, 1)];
+  return { status: 'open', type: 'dine_in', table_no: 5, day_no: 12, customer: '', discount: 0, tax: 0, items, running_total: items.reduce((s, i) => s + i.price * i.qty, 0) };
+}
+async function connectWith(kind) {
+  try {
+    if (kind === 'ble') await PRINTER.connectBle(); else await PRINTER.connectSerial();
+  } catch (e) {
+    if (PRINTER.isCancel(e)) return;                       // you closed Chrome's device picker
+    const next = await pick('Printer problem: ' + PRINTER.errText(e), kind === 'ble'
+      ? [{ label: 'Try the COM port / USB option', value: 'serial' }, { label: 'Add a printer service ID', value: 'svc' }]
+      : [{ label: 'Try Bluetooth instead', value: 'ble' }]);
+    if (next === 'serial') return connectWith('serial');
+    if (next === 'ble') return connectWith('ble');
+    if (next === 'svc') return addService();
+  }
+}
+function addService() {
+  const v = prompt('Printer service ID: 4 characters like ffe0, or the long form with dashes. Leave empty to cancel.');
+  if (!v) return;
+  try { const u = PRINTER.addServiceId(v); toast('Added ' + u + '. Now connect the Bluetooth printer again.'); } catch (e) { toast(e.message, true); }
+}
+async function printerMenu() {
+  const opts = PRINTER.connected
+    ? [{ label: 'Test print', value: 'test' }, { label: 'Print a sample bill', value: 'sample' }, { label: 'Logo on bills: ' + logoName(), value: 'logo' },
+       { label: 'Paper: 58 mm' + (PRINTER.dots === 384 ? '  ✔' : ''), value: 'p58' }, { label: 'Paper: 80 mm' + (PRINTER.dots === 576 ? '  ✔' : ''), value: 'p80' }, { label: 'Disconnect', value: 'off', danger: true }]
+    : [{ label: 'Connect Bluetooth printer (try this first)', value: 'ble' }, { label: 'Connect via COM port / USB', value: 'serial' }, { label: 'Logo on bills: ' + logoName(), value: 'logo' }, { label: 'Add a printer service ID (advanced)', value: 'svc' }];
+  const v = await pick('Printer', opts);
+  try {
+    if (v === 'ble' || v === 'serial') await connectWith(v);
+    if (v === 'svc') addService();
+    if (v === 'test') { await PRINTER.test(); toast('Test sent'); }
+    if (v === 'sample') { await printOut(billHtml(sampleBill()), { watermark: true }); toast('Sample bill sent'); }
+    if (v === 'logo') {
+      const lv = await pick('Logo behind the bill text', LOGO_LEVELS.map(l => ({ label: l.label + (l.v === PRINTER.billLogo ? '  ✔' : ''), value: l.v })));
+      if (lv !== null) { PRINTER.setBillLogo(lv); toast('Logo on bills: ' + logoName()); }
+    }
+    if (v === 'p58') PRINTER.setDots(384);
+    if (v === 'p80') PRINTER.setDots(576);
+    if (v === 'off') await PRINTER.disconnect();
+  } catch (e) { toast(PRINTER.errText(e), true); }
+  showPrinter();
+}
+
+// ---------- data + rendering ----------
+async function loadAll() {
+  [OPEN, PAID] = await Promise.all([api('/api/orders/open'), api('/api/orders?date=' + todayIST()).then(r => r.filter(o => o.status === 'paid'))]);
+  if (sel && !OPEN.concat(PAID).some(o => o.id === sel)) sel = null;
+  renderLists(); renderDetail();
+}
+const kstate = o => {                       // where the food is: nothing ready yet, partly ready, all ready
+  const ks = o.kots.filter(k => o.items.some(i => i.kot_id === k.id && i.status !== 'voided'));
+  if (!ks.length) return '';
+  const ready = ks.filter(k => k.ready_at).length;
+  if (ready === ks.length) return '<span class="badge green">Food ready</span>';
+  return '<span class="badge">' + (ready ? ready + ' of ' + ks.length + ' ready' : 'In kitchen') + '</span>';
+};
+function renderAwait() {
+  const aw = OPEN.filter(o => o.bill_issued_at).sort((a, b) => a.bill_issued_at - b.bill_issued_at);
+  $('#await').innerHTML = aw.length ? `<div class="awaitbox"><b class="t">Tick how these bills were paid</b><span class="muted" style="font-size:14px">The next bill cannot print until this is done.</span>` +
+    aw.map(o => `<div class="aw"><div><b>${esc(label(o))}</b> · bill ${o.bill_no} · ${rupee(o.total)} <span class="muted">printed ${timeStr(o.bill_issued_at)}</span>${o.bill_stale ? ' <span class="badge red">items changed, print again</span>' : ''}</div>
+      <div class="ab"><button class="ok" data-apay="${o.id}:cash">Cash</button><button class="ok" data-apay="${o.id}:upi">UPI</button><button class="ok" data-apay="${o.id}:card">Card</button><button class="ok wide" data-apay="${o.id}:split">Cash + online</button></div></div>`).join('') + '</div>' : '';
+}
+function renderLists() {
+  renderAwait();
+  const open = OPEN.slice().sort((a, b) => a.created_at - b.created_at);
+  $('#openCount').textContent = '(' + open.length + ')';
+  $('#open').innerHTML = open.map(o => {
+    const n = o.items.filter(i => i.status !== 'voided').length;
+    return `<div class="ocard ${o.id === sel ? 'sel' : ''}" data-o="${o.id}" role="button" tabindex="0">
+      <div class="top"><b>${esc(label(o))}</b><b>${rupee(o.running_total)}</b></div>
+      <div class="sub">${mins(o.created_at)} min, ${n} item${n === 1 ? '' : 's'} ${kstate(o)}${o.bill_issued_at ? '<span class="badge red">Bill printed, mark paid</span>' : ''}${o.pending_voids ? '<span class="badge red">Removal pending</span>' : ''}</div>
+      <div class="qacts"><button data-qbill="${o.id}">Print bill</button></div></div>`;
+  }).join('') || '<div class="empty">No open orders right now.</div>';
+  const paid = PAID.slice().sort((a, b) => b.paid_at - a.paid_at);
+  $('#paid').innerHTML = paid.map(o => `<div class="ocard ${o.id === sel ? 'sel' : ''}" data-o="${o.id}" role="button" tabindex="0">
+      <div class="top"><span>Bill ${o.bill_no}, ${esc(label(o))}</span><b>${rupee(o.total)}</b></div>
+      <div class="sub">${timeStr(o.paid_at)}, paid by ${esc(payText(o))}</div></div>`).join('') || '<div class="empty">No bills yet today.</div>';
+}
+function renderDetail() {
+  const o = OPEN.concat(PAID).find(x => x.id === sel);
+  const box = $('#detail');
+  if (!o) { box.innerHTML = '<div class="card empty">Pick an order from the list to see its items and take payment.</div>'; return; }
+  const isOpen = o.status === 'open', isOwner = ME.role === 'owner';
+  let html = `<div class="card det"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h2>${esc(label(o))}</h2>
+    <span class="muted">Order #${o.day_no}, ${timeStr(o.created_at)}${o.bill_no ? ', bill ' + o.bill_no : ''}</span></div>`;
+  o.kots.forEach(k => {
+    html += `<div class="kothead">Sent ${timeStr(k.created_at)}${k.note ? ' – note: ' + esc(k.note) : ''} ${k.ready_at ? '<span class="badge green">Ready ' + timeStr(k.ready_at) + '</span>' : (o.items.some(i => i.kot_id === k.id && i.status !== 'voided') ? '<span class="badge">In kitchen</span>' : '')}</div>`;
+    o.items.filter(i => i.kot_id === k.id).forEach(i => {
+      const gone = i.status === 'voided';
+      html += `<div class="line ${gone ? 'gone' : ''}"><span>${i.qty} × ${esc(nm(i))}
+        ${i.status === 'void_requested' ? `<br><span class="badge">Removal asked (${esc(i.void_reason || '')})</span>` : ''}
+        ${gone ? `<br><span class="muted">Removed – ${esc(i.void_reason || '')}</span>` : ''}</span>
+        <span>${rupee(i.qty * i.price)}
+        ${isOpen && i.status === 'active' ? `<button class="danger" style="min-height:32px;padding:2px 8px" data-rm="${i.id}">Remove</button>` : ''}
+        ${isOpen && i.status === 'void_requested' && isOwner ? `<button class="ok" style="min-height:32px;padding:2px 8px" data-dec="${i.id}" data-yes="1">Approve</button><button style="min-height:32px;padding:2px 8px" data-dec="${i.id}" data-yes="0">Reject</button>` : ''}
+        </span></div>`;
+    });
+  });
+  const sub = isOpen ? o.running_total : o.subtotal;
+  html += `<div class="grand"><span>${isOpen ? 'Total' : 'Paid'}</span><span id="grand">${rupee(isOpen ? sub : o.total)}</span></div>`;
+  if (!isOpen) html += `<div class="muted">${o.discount || o.tax ? 'Subtotal ' + rupee(o.subtotal) + (o.discount ? ' · Discount ' + rupee(o.discount) : '') + (o.tax ? ' · Tax ' + rupee(o.tax) : '') + ' · ' : ''}Paid by ${esc(payText(o))}</div>`;
+  if (isOpen && o.pending_voids) html += `<div class="warn">${isOwner ? 'Approve or reject the removal requests above before billing.' : 'Waiting for the owner to approve item removal before this can be billed.'}</div>`;
+  if (isOpen) {
+    if (o.bill_issued_at) html += `<div class="warn"><b>Bill ${o.bill_no} was printed at ${timeStr(o.bill_issued_at)}.</b> Tick how the guest paid.${o.bill_stale ? ' <b>Items changed after printing, so print the bill again.</b>' : ''}${o.discount ? ' Discount ₹' + o.discount + ' is included.' : ''}</div>`;
+    else if (isOwner) html += `<div style="margin-top:8px"><label class="muted">Discount in rupees (optional)</label><input id="disc" type="number" min="0" inputmode="numeric" placeholder="0"></div>`;
+    html += `<div class="muted" style="margin-top:12px">${o.bill_issued_at ? 'Paid by:' : 'Guest paid by:'}</div><div class="paybtns" style="margin-top:6px"><button class="ok" data-pay="cash" ${o.pending_voids ? 'disabled' : ''}>Cash</button><button class="ok" data-pay="upi" ${o.pending_voids ? 'disabled' : ''}>UPI</button><button class="ok" data-pay="card" ${o.pending_voids ? 'disabled' : ''}>Card</button><button class="ok wide" data-pay="split" ${o.pending_voids ? 'disabled' : ''}>Cash + online</button></div>`;
+  }
+  html += `<div class="row2"><button data-bill="1" ${o.pending_voids ? 'disabled' : ''}>${isOpen ? (o.bill_issued_at ? 'Print bill again' : 'Print bill') : 'Reprint bill'}</button>
+    ${isOpen ? `<button class="danger" data-cancel="1">Cancel order</button>` : ''}</div></div>`;
+  box.innerHTML = html;
+}
+
+document.addEventListener('click', async e => {
+  const t = e.target;
+  const qb = t.closest('[data-qbill]');
+  if (qb) {
+    const bo = OPEN.find(x => x.id === +qb.dataset.qbill);
+    if (bo) { try { await printBill(bo.id); } catch (x) { toast(x.message, true); } }
+    return;
+  }
+  const ap = t.closest('[data-apay]');
+  if (ap) {
+    const [aid, amode] = ap.dataset.apay.split(':');
+    try {
+      const ao = OPEN.find(x => x.id === +aid);
+      const r = await payFlow(+aid, amode);
+      if (r) { toast('Marked ' + payText(r.order) + (ao ? ' for ' + label(ao) : '')); await loadAll(); }
+    } catch (x) { toast(x.message, true); }
+    return;
+  }
+  const oc = t.closest('[data-o]');
+  if (oc) { sel = +oc.dataset.o; renderLists(); renderDetail(); window.scrollTo({ top: 0 }); return; }
+  const o = OPEN.concat(PAID).find(x => x.id === sel);
+  try {
+    if (t.dataset.bill && o) { const dv = document.getElementById('disc')?.value; await printBill(o.id, dv === undefined || dv === '' ? undefined : Number(dv)); }
+    else if (t.dataset.rm) {
+      const why = await pick(ME.role === 'owner' ? 'Remove this item – reason?' : 'Reason (owner must approve)?', REASONS.map(r => ({ label: r, value: r })));
+      if (why) { await api(`/api/items/${t.dataset.rm}/void-request`, { body: { reason: why } }); toast(ME.role === 'owner' ? 'Item removed' : 'Sent to owner for approval'); await loadAll(); }
+    }
+    else if (t.dataset.dec) { await api(`/api/items/${t.dataset.dec}/void-decision`, { body: { approve: t.dataset.yes === '1' } }); await loadAll(); }
+    else if (t.dataset.cancel && o) {
+      const why = await pick('Cancel whole order – reason?', REASONS.map(r => ({ label: r, value: r, danger: true })));
+      if (why) { await api(`/api/orders/${o.id}/cancel-request`, { body: { reason: why } }); toast(ME.role === 'owner' ? 'Order cancelled' : 'Sent to owner for approval'); await loadAll(); }
+    }
+    else if (t.dataset.pay && o) {
+      const r = await payFlow(o.id, t.dataset.pay);
+      if (!r) return;
+      toast('Paid ✔ Bill ' + r.order.bill_no);
+      ME.taxPercent = ME.taxPercent || 0;
+      if (autoPrint && !r.wasIssued) printOut(billHtml(r.order), { watermark: true }).catch(x => toast(x.message, true)); // a bill already printed is not printed twice
+      sel = r.order.id; await loadAll();
+    }
+  } catch (x) { toast(x.message, true); }
+});
+
+async function init() {
+  $('#logoutBtn').innerHTML = ICON.out; $('#logoutBtn').onclick = logout; mountThemeButtons();
+  ME = await api('/api/me');
+  if (ME.role === 'owner') $('#ownerLink').classList.remove('hidden');
+  $('#prn').onclick = printerMenu; PRINTER.onChange(showPrinter); showPrinter(); PRINTER.autoReconnect();
+  const cb = $('#auto'); cb.checked = autoPrint;
+  cb.onchange = () => { autoPrint = cb.checked; try { localStorage.setItem('autoPrint', autoPrint ? '1' : '0'); } catch (e) {} };
+  CHIME.armOnFirstTouch();
+  await loadAll();
+  live(async ev => {
+    await loadAll();
+    if (ev.type === 'kot' && ev.kind !== 'cancel') {
+      const o = OPEN.find(x => x.id === ev.order_id);
+      toast('New order' + (o ? ': ' + label(o) : ''));
+      CHIME.play('ready');
+    }
+    if (ev.type === 'ready') {
+      const o = OPEN.find(x => x.id === ev.order_id);
+      if (o) toast(label(o) + ': food is ready');
+    }
+  });
+  setInterval(() => { if (!document.hidden) { loadAll().catch(() => {}); } }, 30000);
+}
+init().catch(e => { if (e.message !== 'login') toast(e.message, true); });
+</script>
+</body>
+</html>

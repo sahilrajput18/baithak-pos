@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-palette="brand" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Table QR codes – {{name}}</title>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ body{background:#efece2;color:#111}
+ .top{max-width:1000px;margin:0 auto;padding:18px 18px 0}
+ .top h1{margin:0 0 4px;font-family:var(--font-display);font-weight:500;font-size:32px}
+ .top p{margin:4px 0;color:#4a4f4c}
+ .top button{margin-top:8px}
+ .sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;padding:18px;max-width:1000px;margin:0 auto}
+ .qc{background:#fff;border:1.5px solid #cfcab9;border-radius:18px;padding:18px 16px;text-align:center;break-inside:avoid;page-break-inside:avoid}
+ .lg{width:84px;aspect-ratio:900/1077;margin:0 auto 6px;background:#0a5a44;-webkit-mask:url(/assets/brand/logo-green.png) center/contain no-repeat;mask:url(/assets/brand/logo-green.png) center/contain no-repeat}
+ .tn{font-family:var(--font-display);font-weight:500;font-size:34px;line-height:1.1}
+ .qr{width:180px;margin:10px auto}
+ .qr svg{width:100%;height:auto;display:block}
+ .qc p{margin:0}
+ .qc .hi{font-family:var(--font-hindi-display);font-weight:600;font-size:17px}
+ .qc .en{font-size:14px;color:#555}
+ @media print{
+  body{background:#fff}
+  .noprint{display:none!important}
+  .sheet{grid-template-columns:repeat(2,1fr);gap:9mm;padding:0;max-width:none}
+  .qc{border:1px solid #999;border-radius:12px}
+  .qr{width:56mm}
+ }
+</style>
+</head>
+<body>
+<div class="top noprint">
+  <h1>Table QR codes</h1>
+  <p>Each code opens the customer menu. The table number shows at the top of the menu so the customer can call the waiter. The first card has no table number: use it on the door, the bill or social media.</p>
+  <p>Codes point to: <b>{{base}}</b></p>
+  {{warn}}
+  <button class="primary" onclick="window.print()">Print all codes</button>
+</div>
+<div class="sheet">{{cards}}</div>
+</body>
+</html>

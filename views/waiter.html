@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a5a44">
+<link rel="manifest" href="/assets/manifest.webmanifest">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>बैठक – ऑर्डर</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+ .bar h1{font-size:25px;line-height:1.1}
+ .sect{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:4px 2px 14px}
+ .sect h2{margin:0;font-family:var(--font-hindi-display);font-size:25px;font-weight:600}
+ .stat{font-size:15px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+ .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+
+ /* home: tables on the left, parcels on the right (stacked on a phone) */
+ .home{display:grid;gap:32px}
+ .arches{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+ .arch{aspect-ratio:var(--tile-ratio);min-height:0;padding:0 4px 12px;border:1.5px solid var(--line);border-radius:var(--tile-r);background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:var(--tile-justify);text-align:center;font-weight:400}
+ .arch .no{font-family:var(--font-display);font-weight:var(--display-weight);font-size:var(--tile-no);line-height:1;margin-bottom:6px}
+ .arch .st{font-size:15px;color:var(--muted);line-height:1.2;min-height:34px}
+ .arch .st b{display:block;color:var(--ink);font-size:17px}
+ .arch.busy{background:var(--brand-soft);border-color:var(--brand)}
+ .arch{position:relative}
+ .arch.ready{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+ .arch.ready .st,.arch.ready .st b{color:var(--brand-ink)}
+ .arch.draft{border-style:dashed;border-color:var(--brass)}
+ .arch .dr{position:absolute;top:10px;right:10px;min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:var(--brass);color:var(--paper);font-size:15px;font-weight:800;display:grid;place-items:center}
+ .confbox{margin:0 0 22px;padding:6px 14px 10px;border:1.5px solid var(--brass);border-radius:18px;background:var(--brass-soft)}
+ .confbox h2{margin:8px 0 2px;font-family:var(--font-hindi-display);font-size:22px;font-weight:600;color:var(--brass)}
+ .confbox p{margin:0 0 6px;font-size:15px;color:var(--muted)}
+ .crow{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--brass) 35%,transparent)}
+ .crow:first-of-type{border-top:0}
+ .crow b{font-size:20px}.crow small{display:block;color:var(--muted);font-size:15px;margin-bottom:6px}
+ .cb{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ .cb button{min-height:54px;font-size:19px}
+ .cb .both{grid-column:1/-1}
+ .readybox{margin:0 0 26px;padding:6px 14px 8px;border:1.5px solid var(--brand);border-radius:18px;background:var(--brand-soft)}
+ .readybox h2{margin:8px 0 2px;font-family:var(--font-hindi-display);font-size:22px;font-weight:600;color:var(--brand)}
+ .rrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid color-mix(in srgb,var(--brand) 25%,transparent)}
+ .rrow:last-child{border-bottom:0}
+ .rrow b{font-size:20px}
+ .rrow small{display:block;color:var(--muted);font-size:15px;line-height:1.35}
+ .rrow button{flex:none;min-height:50px}
+ .lastbtn{width:100%;min-height:56px;margin:0 0 22px;font-size:19px;color:var(--brand);border-color:var(--brand);background:var(--brand-soft)}
+ .sentstrip{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;margin:10px 0 0;font-weight:500;text-align:left;background:var(--brass-soft);border-color:color-mix(in srgb,var(--brass) 45%,transparent)}
+ .sentstrip small{color:var(--muted);font-size:14px}
+ .sentstrip.isready{background:var(--brand-soft);border-color:var(--brand)}
+ .arch:hover{border-color:var(--brand)}
+ .newparcel{width:100%;min-height:58px;border-style:dashed;font-size:19px;color:var(--brand)}
+ .prow{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;background:transparent;min-height:64px;padding:8px 2px;font-weight:400;font-size:18px}
+ .prow small{display:block;color:var(--muted);font-size:14px}
+ #net{position:sticky;top:58px;z-index:15;margin:-14px -14px 14px;border-radius:0;border-width:0 0 1px;text-align:center;font-weight:600}
+
+ /* menu */
+ .find{position:sticky;top:58px;z-index:10;background:var(--ground);margin:-14px -14px 0;padding:12px 14px 0}
+ .field{position:relative}
+ .field svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+ .field input{padding-left:46px;border-radius:14px;font-size:18px}
+ .tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin:6px -14px 0;padding:0 8px}
+ .tabs::-webkit-scrollbar{display:none}
+ .tabs button{border:0;background:transparent;border-radius:0;min-height:50px;padding:0 13px;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent;font-size:17px;font-weight:600}
+ .tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+ #cust{margin-bottom:10px;max-width:520px}
+ .mi{padding:12px 4px 12px 6px;border-bottom:1px solid var(--line-soft);cursor:pointer;user-select:none;-webkit-user-select:none;break-inside:avoid}
+ .mi.has{box-shadow:inset 4px 0 0 var(--brand);padding-left:14px;background:color-mix(in srgb,var(--brand-soft) 45%,transparent)}
+ .mi.off{opacity:.5;cursor:default}
+ .mi-top{display:flex;align-items:flex-end;gap:8px}
+ .mi-name{min-width:0;flex:0 1 auto}
+ .mi-name .hi{display:block;font-size:20px;font-weight:600;line-height:1.3}
+ .mi-name .en{display:block;font-size:14px;color:var(--muted);line-height:1.3}
+ .leader{flex:1 1 12px;min-width:0;border-bottom:2px dotted var(--line);margin-bottom:10px}
+ .price{font-weight:700;font-size:19px;white-space:nowrap;font-variant-numeric:tabular-nums;margin-bottom:3px}
+ .out{font-size:14px;font-weight:600;color:var(--crimson);margin-bottom:3px}
+ .step{display:inline-flex;align-items:center}
+ .step button{width:42px;height:42px;min-height:0;padding:0;border-radius:50%;font-size:24px;line-height:1;display:grid;place-items:center}
+ .step b{min-width:28px;text-align:center;font-size:20px}
+ .mi-top .step{margin-left:2px;margin-bottom:-4px}
+ .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+ .opt1{flex:1 1 140px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:52px;padding:6px 8px 6px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--paper)}
+ .opt1.on{background:var(--brand-soft);border-color:var(--brand)}
+ .opt1.off{opacity:.5}
+ .opt1 .v{font-weight:600}
+ .opt1 .p{font-weight:700;font-variant-numeric:tabular-nums}
+ .opt1 .m{display:inline-flex;align-items:center}
+ .opt1 .m button{width:38px;height:38px;min-height:0;padding:0;border-radius:50%;font-size:22px;display:grid;place-items:center}
+ .opt1 .m b{min-width:26px;text-align:center;font-size:19px}
+ .empty{padding:36px 8px;text-align:center;color:var(--muted)}
+
+ /* order screen: menu + order slip */
+ .split{display:block}
+ .slip-col{display:none}
+ #dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px}
+ #dock .slipbtn{flex:1;text-align:left;display:flex;flex-direction:column;justify-content:center;line-height:1.15;padding:6px 14px}
+ #dock .slipbtn small{font-size:13px;color:var(--muted);font-weight:500}
+ #dock .slipbtn b{font-size:18px}
+ #dock .nobtn{border:0;background:transparent;pointer-events:none}
+ #dock .send{flex:1.1;font-size:20px}
+
+ /* the order slip (same content in the phone popup and in the wide side panel) */
+ .slip-col h3,.overlay .box h3{margin:0 0 12px;font-family:var(--font-hindi-display);font-size:22px;font-weight:600}
+ .sub-h{font-family:var(--font-hindi-display);font-size:19px;font-weight:600;margin:18px 2px 8px}
+ .sub-h.first{margin-top:0}
+ .slip{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:2px 14px}
+ .slip-col .slip{background:var(--ground)}
+ .ln{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1.5px dashed var(--line-soft)}
+ .ln:last-child{border-bottom:0}
+ .ln .nm{flex:1;min-width:0}
+ .ln .nm b{display:block;font-size:18px;font-weight:600;line-height:1.3}
+ .ln .nm small{color:var(--muted);font-size:14px}
+ .ln .amt{font-weight:700;min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+ .ln .del{width:44px;height:44px;min-height:0;padding:0;border-color:transparent;background:transparent;color:var(--crimson);display:grid;place-items:center}
+ .ln.gone .nm b{text-decoration:line-through;color:var(--muted)}
+ .ln .st{font-size:13px;font-weight:600;color:var(--brass)}
+ .ln .rm{min-height:40px;padding:4px 12px;font-size:15px}
+ .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 10px}
+ .chip{min-height:42px;padding:4px 14px;border-radius:999px;font-weight:500}
+ .chip.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:600}
+ .sumrow{display:flex;justify-content:space-between;align-items:baseline;font-size:21px;font-weight:700;padding:12px 2px}
+ .hint{font-size:14px;color:var(--muted);margin:8px 2px 0}
+ .acts{display:grid;gap:10px;margin-top:18px}
+ .slip-col .empty-slip{color:var(--muted);padding:12px 2px}
+
+ /* "sent" confirmation */
+ .sentok{position:fixed;inset:0;z-index:80;background:var(--brand);color:var(--brand-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:24px;animation:fade .15s}
+ .sentok svg path{stroke-dasharray:32;stroke-dashoffset:32;animation:draw .4s .12s ease-out forwards}
+ .sentok h2{font-family:var(--font-hindi-display);font-size:30px;margin:14px 0 0}
+ .sentok p{margin:0;font-size:18px;opacity:.9}
+ @keyframes draw{to{stroke-dashoffset:0}}
+
+ /* ---------- tablet ---------- */
+ @media(min-width:560px){
+  .arches{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px}
+ }
+ @media(min-width:700px){
+  #list{column-width:340px;column-gap:28px}
+ }
+ /* ---------- laptop / big tablet: order slip stays visible beside the menu ---------- */
+ @media(min-width:900px){
+  #dock.odock{display:none!important}
+  .arch .no{font-size:calc(var(--tile-no) + 8px)}
+  #net{margin:-22px -24px 16px}
+  .find{margin:0;padding:0}
+  .tabs{margin:8px 0 0;padding:0}
+  .split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;align-items:start}
+  .slip-col{display:block;position:sticky;top:78px;max-height:calc(100vh - 100px);overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px}
+ }
+ @media(min-width:1000px){
+  .home{grid-template-columns:minmax(0,1fr) 360px;align-items:start}
+ }
+</style>
+</head>
+<body>
+<header class="bar">
+  <button id="back" class="iconbtn hidden" aria-label="वापस"></button>
+  <a class="brand" id="brand"><img src="/assets/brand/mark-cream.png" alt="" width="38" height="38"><span><i class="the">The </i>Baithak Stories</span></a>
+  <h1 id="title" class="hi-display hidden"></h1>
+  <div class="icons">
+    <a id="toCounter" href="/counter" class="hidden">काउंटर</a>
+    <button class="iconbtn" data-look-btn aria-label="रंग-रूप बदलें"></button>
+    <button class="iconbtn" data-theme-btn aria-label="थीम बदलें"></button>
+    <button class="iconbtn" id="logoutBtn" aria-label="बाहर जाएँ"></button>
+  </div>
+</header>
+<main id="app"></main>
+<div id="dock" class="hidden"></div>
+<div id="toast"></div>
+
+<script src="/assets/common.js?v={{v}}"></script>
+<script src="/assets/chime.js?v={{v}}"></script>
+<script>
+let ME, MENU = [], ITEMS = [], OPEN = [], POP = [], DRAFTS = {}, CONFIRMS = [];
+let view = 'home';              // 'home' | 'order'
+let cur = null;                 // {type, table_no, orderId}
+let cart = {};                  // menu id -> qty (not sent yet)
+let tab = '', q = '', picked = new Set(), noteText = '', customer = '', sending = false;
+const NOTES = ['कम तीखा', 'ज़्यादा तीखा', 'बिना प्याज़', 'बिना लहसुन', 'कम तेल', 'जल्दी चाहिए'];
+const REASONS = ['ग्राहक ने मना किया', 'गलत एंट्री हो गई', 'आइटम ख़त्म है', 'बहुत देर हो गई'];
+const keyOf = c => c.type === 'dine_in' ? 'T' + c.table_no : (c.orderId ? 'P' + c.orderId : 'P0');
+const draftCount = d => Object.values(d.cart).reduce((a, b) => a + b, 0);
+const wideMQ = matchMedia('(min-width: 900px)');
+const isWide = () => wideMQ.matches;
+
+const $ = s => document.querySelector(s);
+const byId = id => MENU.find(m => m.id === id);
+const curOrder = () => cur && cur.orderId ? OPEN.find(o => o.id === cur.orderId) : null;
+const count = () => Object.values(cart).reduce((a, b) => a + b, 0);
+const cartTotal = () => Object.entries(cart).reduce((s, [id, n]) => s + ((byId(+id) || {}).price || 0) * n, 0);
+const mins = ms => Math.max(1, Math.round((Date.now() - ms) / 60000));
+const lineName = i => i.name_hi + (i.variant_hi ? ' (' + i.variant_hi + ')' : '');
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+const title = () => cur.type === 'dine_in' ? 'टेबल ' + cur.table_no : 'पार्सल' + (curOrder() ? ' #' + curOrder().day_no : '');
+
+async function loadOpen() { OPEN = await api('/api/orders/open'); }
+// tables the counter has marked paid, waiting for the waiter to say how the guest really paid (he is not shown the counter's entry)
+async function loadConfirms() { try { CONFIRMS = await api('/api/payments/confirm'); } catch (e) { CONFIRMS = []; } }
+function buildItems() {
+  const map = new Map();
+  MENU.forEach(m => {
+    const k = m.category + '|' + m.name;
+    if (!map.has(k)) map.set(k, { category: m.category, category_hi: m.category_hi, name: m.name, name_hi: m.name_hi, vars: [] });
+    map.get(k).vars.push(m);
+  });
+  ITEMS = [...map.values()];
+}
+const categories = () => [...new Set(MENU.map(m => m.category_hi))];
+
+// ---------- drafts: orders written down but not sent yet (kept on this phone, so a refresh never loses them) ----------
+const DKEY = 'drafts';
+function loadDrafts() {
+  try { DRAFTS = JSON.parse(localStorage.getItem(DKEY) || '{}'); } catch (e) { DRAFTS = {}; }
+  const old = Date.now() - 12 * 3600000;
+  for (const [k, d] of Object.entries(DRAFTS)) {
+    const parcelGone = d.type === 'takeaway' && d.orderId && !OPEN.some(o => o.id === d.orderId);
+    if (!d || !d.cart || !draftCount(d) || d.at < old || parcelGone) delete DRAFTS[k];
+  }
+  saveDrafts();
+}
+function saveDrafts() { try { localStorage.setItem(DKEY, JSON.stringify(DRAFTS)); } catch (e) {} }
+function snapshot() { return { type: cur.type, table_no: cur.table_no, orderId: cur.orderId, cart: { ...cart }, picked: [...picked], note: noteText, customer, at: Date.now() }; }
+function persist() {
+  if (view !== 'order' || !cur) return;
+  if (count()) DRAFTS[keyOf(cur)] = snapshot(); else delete DRAFTS[keyOf(cur)];
+  saveDrafts();
+}
+const draftTitle = d => d.type === 'dine_in' ? 'टेबल ' + d.table_no : 'पार्सल' + (d.customer ? ' ' + d.customer : '');
+const LAST = 'lastOrder';
+const rememberLast = c => { try { localStorage.setItem(LAST, JSON.stringify({ type: c.type, table_no: c.table_no, orderId: c.orderId, at: Date.now() })); } catch (e) {} };
+function lastOpen() {                      // the table or parcel the waiter just sent to, if it is still open
+  let l; try { l = JSON.parse(localStorage.getItem(LAST) || 'null'); } catch (e) {}
+  if (!l || Date.now() - l.at > 60 * 60000) return null;
+  const o = l.type === 'dine_in' ? OPEN.find(x => x.type === 'dine_in' && x.table_no === l.table_no) : OPEN.find(x => x.id === l.orderId);
+  return o ? { type: o.type, table_no: o.table_no, orderId: o.id, day_no: o.day_no } : null;
+}
+// food the kitchen has marked ready that the waiter has not yet taken out
+function readyList() {
+  const out = [];
+  OPEN.forEach(o => o.kots.forEach(k => {
+    if (k.ready_at && !k.served_at) out.push({ kot: k, order: o, items: o.items.filter(i => i.kot_id === k.id && i.status !== 'voided') });
+  }));
+  return out.filter(r => r.items.length).sort((a, b) => a.kot.ready_at - b.kot.ready_at);
+}
+const orderName = o => o.type === 'dine_in' ? 'टेबल ' + o.table_no : 'पार्सल #' + o.day_no;
+
+// ---------- start ----------
+async function init() {
+  $('#back').innerHTML = ICON.back;
+  $('#logoutBtn').innerHTML = ICON.out;
+  $('#logoutBtn').onclick = logout;
+  mountThemeButtons();
+  CHIME.armOnFirstTouch();
+  ME = await api('/api/me');
+  if (ME.role !== 'waiter') $('#toCounter').classList.remove('hidden');
+  MENU = await api('/api/menu'); buildItems();
+  [POP] = await Promise.all([api('/api/popular').catch(() => []), loadOpen()]);
+  loadDrafts(); await loadConfirms();
+  renderHome(); showNet(); flushOb();
+  live(async ev => {
+    try {
+      if (ev.type === 'menu') { MENU = await api('/api/menu'); buildItems(); if (view === 'order') refreshList(); }
+      await loadOpen(); await loadConfirms();
+    } catch (e) { return; }
+    if (ev.type === 'paid' && CONFIRMS.length) { toast('पेमेंट कन्फर्म करें'); buzz([120, 80, 120]); }
+    if (ev.type === 'ready') {
+      const nm = ev.order_type === 'dine_in' ? 'टेबल ' + ev.table_no : 'पार्सल #' + ev.day_no;
+      toast(nm + ' का खाना तैयार है'); buzz([200, 100, 200]); CHIME.play('ready');
+    }
+    if (view === 'home') renderHome(); else { updateDock(); drawSlip(true); }
+  });
+  setInterval(() => { if (view === 'home' && !document.hidden) loadOpen().then(loadConfirms).then(renderHome).catch(() => {}); }, 30000);
+  wideMQ.addEventListener('change', () => { if (view === 'order') { document.querySelector('.overlay.cart')?.remove(); renderOrder(); } });
+}
+
+// ---------- home: pick a table or start a parcel ----------
+function renderHome() {
+  view = 'home';
+  $('#brand').classList.remove('hidden'); $('#title').classList.add('hidden'); $('#back').classList.add('hidden');
+  const dine = OPEN.filter(o => o.type === 'dine_in');
+  const ready = readyList(), readyOrders = new Set(ready.map(r => r.order.id));
+  const last = lastOpen(), lastKey = last ? keyOf(last) : null;
+  let h = `<div id="net" class="banner hidden"></div>`;
+  if (CONFIRMS.length) {
+    h += `<section class="confbox"><h2>पेमेंट कन्फर्म करें</h2><p>जो आपने देखा, वही दबाएँ। इससे काउंटर की एंट्री मिलाई जाती है।</p>` + CONFIRMS.map(c => `<div class="crow"><b>टेबल ${c.table_no} · ${rupee(c.total)}</b><small>ग्राहक ने कैसे पैसे दिए?</small>
+      <div class="cb"><button data-conf="${c.id}:cash">नक़द</button><button data-conf="${c.id}:upi">UPI</button><button data-conf="${c.id}:card">कार्ड</button><button class="both" data-conf="${c.id}:split">दोनों: नक़द + ऑनलाइन</button></div></div>`).join('') + '</section>';
+  }
+  if (ready.length) {
+    h += `<section class="readybox"><h2>खाना तैयार है, ले जाएँ</h2>` + ready.map(r => `<div class="rrow"><span><b>${esc(orderName(r.order))}</b>
+      <small>${r.items.map(i => i.qty + ' × ' + esc(i.name_hi)).join(', ')} · ${mins(r.kot.ready_at)} मिनट पहले</small></span>
+      <button class="primary" data-served="${r.kot.id}">परोस दिया</button></div>`).join('') + '</section>';
+  }
+  if (last && !DRAFTS[lastKey]) h += `<button class="lastbtn" id="lastBtn">+ ${esc(last.type === 'dine_in' ? 'टेबल ' + last.table_no : 'पार्सल #' + last.day_no)} में और जोड़ें</button>`;
+  h += `<div class="home"><section><div class="sect"><h2>टेबल चुनें</h2><div class="stat">
+    ${dine.length ? `<span><i class="dot" style="background:var(--brand)"></i>${dine.length} भरे</span>` : ''}</div></div><div class="arches">`;
+  for (let t = 1; t <= ME.tables; t++) {
+    const o = dine.find(x => x.table_no === t), d = DRAFTS['T' + t];
+    const badge = d ? `<span class="dr" title="भेजना बाकी">${draftCount(d)}</span>` : '';
+    if (!o) { h += `<button class="arch ${d ? 'draft' : ''}" data-t="${t}">${badge}<span class="no">${t}</span><span class="st">${d ? '<b>भेजना बाकी</b>' : 'खाली'}</span></button>`; continue; }
+    const rdy = readyOrders.has(o.id);
+    h += `<button class="arch ${rdy ? 'ready' : 'busy'} ${d ? 'draft' : ''}" data-t="${t}">${badge}<span class="no">${t}</span>
+      <span class="st"><b>${rdy ? 'खाना तैयार' : rupee(o.running_total)}</b>${rdy ? '' : mins(o.created_at) + ' मिनट'}${o.pending_voids ? ' ⚠' : ''}</span></button>`;
+  }
+  h += `</div></section><section><div class="sect"><h2>पार्सल</h2></div><button class="newparcel" id="newParcel">+ नया पार्सल${DRAFTS.P0 ? ' (' + draftCount(DRAFTS.P0) + ' आइटम रखे हैं)' : ''}</button>`;
+  OPEN.filter(o => o.type === 'takeaway').forEach(o => {
+    const d = DRAFTS['P' + o.id];
+    h += `<button class="prow" data-p="${o.id}"><span><b>पार्सल #${o.day_no}</b>${o.customer ? ' – ' + esc(o.customer) : ''}<small>${mins(o.created_at)} मिनट पहले</small></span>
+      <span><b>${rupee(o.running_total)}</b>${readyOrders.has(o.id) ? '<span class="badge green">तैयार</span>' : ''}${d ? `<span class="badge">+${draftCount(d)} बाकी</span>` : ''}</span></button>`;
+  });
+  h += '</section></div>';
+  $('#app').innerHTML = h;
+  updateDock();
+  showNet();
+}
+function startOrder(c) {
+  cur = c; picked = new Set(); noteText = ''; customer = ''; q = ''; cart = {};
+  const d = DRAFTS[keyOf(c)];
+  if (d) {
+    Object.entries(d.cart).forEach(([id, n]) => { if (byId(+id)) cart[id] = n; });
+    picked = new Set(d.picked || []); noteText = d.note || ''; customer = d.customer || '';
+  }
+  tab = POP.length ? 'fav' : 'c:' + categories()[0];
+  view = 'order'; renderOrder();
+}
+
+// ---------- order screen ----------
+function renderOrder() {
+  $('#brand').classList.add('hidden'); $('#title').classList.remove('hidden'); $('#back').classList.remove('hidden');
+  $('#title').textContent = title();
+  $('#app').innerHTML =
+    (cur.type === 'takeaway' && !curOrder() ? `<input id="cust" placeholder="ग्राहक का नाम (ज़रूरी नहीं)" value="${esc(customer)}">` : '') +
+    sentStrip() +
+    `<div class="split"><div class="menu-col"><div class="find"><div class="field">${ICON.search}<input id="search" type="search" placeholder="आइटम खोजें" value="${esc(q)}" autocomplete="off"></div><div class="tabs" id="tabs"></div></div><div id="list"></div></div>
+     <aside id="slip" class="slip-col" aria-label="ऑर्डर पर्ची"></aside></div>`;
+  bindSlip($('#slip'), () => {});
+  renderTabs(); refreshList(); updateDock(); drawSlip();
+}
+// shows on a phone when this table already has items in the kitchen, so adding more is obvious
+function sentStrip() {
+  const o = curOrder(); if (!o || isWide()) return '';
+  const live = o.items.filter(i => i.status !== 'voided'); if (!live.length) return '';
+  const rdy = o.kots.some(k => k.ready_at && !k.served_at);
+  return `<button class="sentstrip ${rdy ? 'isready' : ''}" id="stripBtn"><span><b>पहले से भेजा: ${live.reduce((s, i) => s + i.qty, 0)} आइटम · ${rupee(o.running_total)}</b><br><small>${rdy ? 'खाना तैयार है' : 'नीचे से और आइटम जोड़ें'}</small></span><span>देखें</span></button>`;
+}
+function tabList() {
+  const t = [];
+  if (POP.length) t.push({ id: 'fav', label: 'पसंदीदा' });
+  t.push({ id: 'all', label: 'सभी' });
+  categories().forEach(c => t.push({ id: 'c:' + c, label: c }));
+  return t;
+}
+function renderTabs() {
+  $('#tabs').innerHTML = tabList().map(t => `<button data-tab="${esc(t.id)}" class="${!q.trim() && t.id === tab ? 'on' : ''}">${esc(t.label)}</button>`).join('');
+  const on = $('#tabs .on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+function visibleItems() {
+  const s = q.trim().toLowerCase();
+  if (s) return ITEMS.filter(i => i.name.toLowerCase().includes(s) || i.name_hi.includes(s) || i.category_hi.includes(s) || i.category.toLowerCase().includes(s));
+  if (tab === 'fav') return POP.flatMap(n => ITEMS.filter(i => i.name === n));
+  if (tab === 'all') return ITEMS;
+  return ITEMS.filter(i => 'c:' + i.category_hi === tab);
+}
+function itemHtml(i) {
+  const nameBlock = v => `<div class="mi-name"><span class="hi">${esc(i.name_hi)}${v && v.variant_hi ? `<span class="tag">${esc(v.variant_hi)}</span>` : ''}</span><span class="en">${esc(i.name)}</span></div>`;
+  if (i.vars.length === 1) {
+    const v = i.vars[0], n = cart[v.id] || 0;
+    return `<div class="mi ${n ? 'has' : ''} ${v.available ? '' : 'off'}" ${v.available ? `data-act="add" data-id="${v.id}"` : ''}>
+      <div class="mi-top">${nameBlock(v)}<span class="leader"></span>
+      ${v.available ? `<span class="price">${rupee(v.price)}</span>` : '<span class="out">ख़त्म</span>'}
+      ${n ? `<span class="step"><button data-act="dec" data-id="${v.id}" aria-label="एक कम करें">−</button><b>${n}</b><button data-act="add" data-id="${v.id}" aria-label="एक बढ़ाएँ">+</button></span>` : ''}</div></div>`;
+  }
+  const total = i.vars.reduce((s, v) => s + (cart[v.id] || 0), 0);
+  return `<div class="mi ${total ? 'has' : ''}" style="cursor:default"><div class="mi-top">${nameBlock(null)}</div><div class="opts">` +
+    i.vars.map(v => {
+      const n = cart[v.id] || 0;
+      if (!v.available) return `<div class="opt1 off"><span class="v">${esc(v.variant_hi)}</span><span class="out">ख़त्म</span></div>`;
+      return `<div class="opt1 ${n ? 'on' : ''}" data-act="add" data-id="${v.id}" role="button" tabindex="0"><span><span class="v">${esc(v.variant_hi)}</span> <span class="p">${rupee(v.price)}</span></span>
+        ${n ? `<span class="m"><button data-act="dec" data-id="${v.id}" aria-label="एक कम करें">−</button><b>${n}</b></span>` : ''}</div>`;
+    }).join('') + '</div></div>';
+}
+function refreshList() {
+  const rows = visibleItems();
+  $('#list').innerHTML = rows.map(itemHtml).join('') || '<div class="empty">इस नाम का कोई आइटम नहीं मिला। दूसरा नाम खोजें।</div>';
+}
+function setQty(id, d) {
+  const n = Math.max(0, Math.min(50, (cart[id] || 0) + d));
+  if (n) cart[id] = n; else delete cart[id];
+  if (d > 0) buzz(8);
+}
+function updateDock() {
+  const d = $('#dock');
+  if (view !== 'order') {
+    const n = Object.keys(DRAFTS).length;
+    if (!n) { d.className = 'hidden'; return; }
+    const items = Object.values(DRAFTS).reduce((s, x) => s + draftCount(x), 0);
+    d.className = 'hdock';
+    d.innerHTML = `<div class="slipbtn nobtn"><small>भेजना बाकी</small><b>${n} ऑर्डर · ${items} आइटम</b></div>
+      <button class="primary send" id="sendAll" ${sending ? 'disabled' : ''}>सब किचन भेजें</button>`;
+    return;
+  }
+  d.className = 'odock';
+  const n = count(), o = curOrder();
+  d.innerHTML = `<button class="slipbtn" id="openCart"><small>${n ? 'भेजना बाकी' : (o ? 'अब तक का बिल' : 'ऑर्डर')}</small><b>${n ? n + ' आइटम  ' + rupee(cartTotal()) : (o ? rupee(o.running_total) : 'अभी खाली')}</b></button>
+    <button class="primary send" id="sendBtn" ${n && !sending ? '' : 'disabled'}>किचन भेजें</button>`;
+}
+function syncCart() { persist(); updateDock(); if (view === 'order') refreshList(); drawSlip(); }
+
+// ---------- order slip (what is waiting, what was sent) ----------
+function slipHtml(inline) {
+  const o = curOrder(), ids = Object.keys(cart).map(Number).filter(id => byId(id));
+  let h = `<h3>${esc(title())}</h3>`;
+  if (ids.length) {
+    h += '<div class="sub-h first">भेजना बाकी</div><div class="slip">' + ids.map(id => {
+      const m = byId(id);
+      return `<div class="ln"><div class="nm"><b>${esc(lineName(m))}</b><small>${rupee(m.price)}</small></div>
+        <span class="step"><button data-c="dec" data-id="${id}" aria-label="एक कम करें">−</button><b>${cart[id]}</b><button data-c="add" data-id="${id}" aria-label="एक बढ़ाएँ">+</button></span>
+        <span class="amt">${rupee(m.price * cart[id])}</span>
+        <button class="del" data-c="del" data-id="${id}" aria-label="${esc(m.name_hi)} हटाएँ">${ICON.trash}</button></div>`;
+    }).join('') + '</div>';
+    h += `<div style="text-align:right;margin-top:2px"><button class="ghost" data-c="clear">सब हटाएँ</button></div>
+      <div class="chips">${NOTES.map(n => `<button class="chip ${picked.has(n) ? 'on' : ''}" data-note="${esc(n)}">${n}</button>`).join('')}</div>
+      <input id="noteIn" placeholder="किचन के लिए और कुछ लिखें" value="${esc(noteText)}">
+      <div class="sumrow"><span>कुल</span><span>${rupee(cartTotal())}</span></div>
+      <button class="primary" id="sheetSend" style="width:100%;font-size:20px;min-height:54px">किचन भेजें</button>`;
+  }
+  if (o && o.items.length) {
+    const graceMin = Math.round((ME.graceSec || 0) / 60);
+    const canQuick = ME.graceSec > 0 && o.items.some(i => i.status === 'active' && Date.now() - i.created_at < ME.graceSec * 1000);
+    h += '<div class="sub-h">किचन को भेजा जा चुका</div><div class="slip">' + o.items.map(i => {
+      const gone = i.status === 'voided';
+      return `<div class="ln ${gone ? 'gone' : ''}"><div class="nm"><b>${i.qty} × ${esc(lineName(i))}</b>
+        <small>${timeStr(i.created_at)}</small>${i.status === 'void_requested' ? ' <span class="st">मालिक की मंज़ूरी बाकी</span>' : ''}${gone ? ' <span class="st">हटाया गया</span>' : ''}</div>
+        <span class="amt">${rupee(i.qty * i.price)}</span>
+        ${i.status === 'active' ? `<button class="danger rm" data-rm="${i.id}">हटाएँ</button>` : ''}</div>`;
+    }).join('') + `</div><div class="sumrow"><span>अब तक का बिल</span><span>${rupee(o.running_total)}</span></div>`;
+    if (canQuick) h += `<p class="hint">भेजने के ${graceMin} मिनट के अंदर आप खुद हटा सकते हैं। उसके बाद मालिक की मंज़ूरी चाहिए।</p>`;
+  }
+  if (!ids.length && !(o && o.items.length)) h += `<p class="${inline ? 'empty-slip' : 'muted'}">अभी कोई आइटम नहीं है। मेन्यू से आइटम चुनें।</p>`;
+  h += '<div class="acts">';
+  if (o) h += `<button class="danger" id="cancelOrder">पूरा ऑर्डर रद्द करें</button>`;
+  if (!inline) h += '<button id="closeCart">बंद करें</button>';
+  return h + '</div>';
+}
+// repaint the slip wherever it lives: the side panel on wide screens, the popup on phones
+function drawSlip(fromLive) {
+  if (view !== 'order') return;
+  if (isWide()) {
+    const el = $('#slip'); if (!el) return;
+    if (fromLive && document.activeElement && document.activeElement.id === 'noteIn') return; // don't disturb typing
+    const sc = el.scrollTop; el.innerHTML = slipHtml(true); el.scrollTop = sc;
+  } else {
+    const box = document.querySelector('.overlay.cart .box');
+    if (box) { const sc = box.scrollTop; box.innerHTML = slipHtml(false); box.scrollTop = sc; }
+  }
+}
+function openCart() {
+  if (isWide()) return;
+  const ov = document.createElement('div');
+  ov.className = 'overlay cart'; ov.innerHTML = '<div class="box"></div>';
+  document.body.appendChild(ov);
+  bindSlip(ov, () => ov.remove());
+  drawSlip();
+}
+function bindSlip(root, close) {
+  root.addEventListener('input', e => { if (e.target.id === 'noteIn') { noteText = e.target.value; persist(); } });
+  root.addEventListener('click', async e => {
+    const t = e.target, o = curOrder();
+    if (t === root || t.id === 'closeCart') return close();
+    if (t.id === 'sheetSend') return send();
+    const c = t.closest('[data-c]');
+    if (c) {
+      const id = +c.dataset.id, restore = snap => () => { cart = snap; syncCart(); };
+      if (c.dataset.c === 'add') setQty(id, 1);
+      if (c.dataset.c === 'dec') setQty(id, -1);
+      if (c.dataset.c === 'del') { const snap = { ...cart }; delete cart[id]; toast(byId(id).name_hi + ' हटा दिया', { action: { label: 'वापस लाएँ', fn: restore(snap) } }); }
+      if (c.dataset.c === 'clear') { const snap = { ...cart }; cart = {}; toast('सब हटा दिया', { action: { label: 'वापस लाएँ', fn: restore(snap) } }); }
+      return syncCart();
+    }
+    const nb = t.closest('[data-note]');
+    if (nb) { const n = nb.dataset.note; picked.has(n) ? picked.delete(n) : picked.add(n); return syncCart(); }
+    const rm = t.closest('[data-rm]');
+    if (rm && o) {
+      try {
+        const r = await api(`/api/items/${rm.dataset.rm}/void-request`, { body: { reason: 'वेटर ने हटाया' } });
+        await loadOpen(); toast(r.voided ? 'हटा दिया। किचन को रद्द का संदेश चला गया।' : 'मालिक को रिक्वेस्ट भेज दी');
+        if (!OPEN.find(x => x.id === o.id)) { close(); return goHome(); }
+        syncCart();
+      } catch (x) { toast(x.message, true); }
+    }
+    if (t.id === 'cancelOrder' && o) {
+      const why = await pick('ऑर्डर रद्द करने का कारण?', REASONS.map(r => ({ label: r, value: r, danger: true })));
+      if (!why) return;
+      try {
+        const r = await api(`/api/orders/${o.id}/cancel-request`, { body: { reason: why } });
+        await loadOpen(); close(); delete DRAFTS[keyOf(cur)]; saveDrafts();
+        toast(r.order.status === 'cancelled' ? 'ऑर्डर रद्द हो गया' : 'मालिक को रिक्वेस्ट भेज दी'); goHome();
+      } catch (x) { toast(x.message, true); }
+    }
+  });
+}
+function goHome() { persist(); view = 'home'; cur = null; cart = {}; renderHome(); }
+
+// ---------- sending (works even if the internet drops: the order is saved and retried) ----------
+function postJob(job) {
+  const body = { client_id: job.id, items: job.items, note: job.note };
+  if (job.orderId) return api(`/api/orders/${job.orderId}/items`, { body });
+  return api('/api/orders', { body: { ...body, type: job.type, table_no: job.table_no, customer: job.customer } });
+}
+const OB = 'outbox';
+const loadOb = () => { try { return JSON.parse(localStorage.getItem(OB) || '[]'); } catch (e) { return []; } };
+const saveOb = a => { try { localStorage.setItem(OB, JSON.stringify(a)); } catch (e) {} };
+function showNet() {
+  const n = loadOb().length, b = $('#net');
+  if (!b) return;
+  b.classList.toggle('hidden', !n);
+  b.textContent = n ? `नेट नहीं है। ${n} ऑर्डर सेव है, नेट आते ही किचन को भेज दिया जाएगा।` : '';
+}
+let flushing = false;
+async function flushOb() {
+  if (flushing || !loadOb().length) return;
+  flushing = true;
+  try {
+    let a = loadOb();
+    while (a.length) {
+      try { await postJob(a[0]); a.shift(); saveOb(a); toast('सेव किया हुआ ऑर्डर किचन को भेज दिया'); }
+      catch (e) {
+        if (e.status) { toast('ऑर्डर नहीं जा सका: ' + e.message + ' (' + a[0].label + ')', true); a.shift(); saveOb(a); }
+        else break; // still offline
+      }
+    }
+  } finally { flushing = false; showNet(); }
+  try { await loadOpen(); if (view === 'home') renderHome(); } catch (e) {}
+}
+setInterval(flushOb, 5000);
+window.addEventListener('online', flushOb);
+
+// turns a saved draft into what the server needs. The table's open order is looked up now, so it is always current.
+function jobFor(d) {
+  const o = d.type === 'dine_in' ? OPEN.find(x => x.type === 'dine_in' && x.table_no === d.table_no) : (d.orderId ? OPEN.find(x => x.id === d.orderId) : null);
+  const parts = [...(d.picked || [])]; if ((d.note || '').trim()) parts.push(d.note.trim());
+  return { id: uid(), orderId: o ? o.id : null, type: d.type, table_no: d.table_no, customer: (d.customer || '').trim(), note: parts.join(', '),
+    items: Object.entries(d.cart).map(([id, qty]) => ({ menu_id: +id, qty })), label: draftTitle(d) + ', ' + draftCount(d) + ' आइटम' };
+}
+// sends one draft. Returns 'sent', 'queued' (no network, saved to retry) or throws when the server said no.
+async function dispatch(d) {
+  const job = jobFor(d);
+  try { await postJob(job); return 'sent'; }
+  catch (e) {
+    if (e.status) throw e;                               // the server said no (for example an item sold out): keep the draft
+    const a = loadOb(); a.push(job); saveOb(a); return 'queued';   // no network: keep it safe and retry
+  }
+}
+async function send() {
+  if (sending || !count()) return;
+  const d = snapshot(), key = keyOf(cur);
+  sending = true; updateDock();
+  try {
+    const r = await dispatch(d);
+    delete DRAFTS[key]; saveDrafts(); rememberLast(d);
+    sentOk(draftTitle(d) + ', ' + draftCount(d) + ' आइटम', r === 'queued');
+  } catch (e) { toast(e.message, true); }
+  sending = false; updateDock();
+}
+async function sendAll() {
+  const keys = Object.keys(DRAFTS);
+  if (sending || !keys.length) return;
+  sending = true; updateDock();
+  const sent = [], errors = [];
+  let queued = false;
+  for (const k of keys) {
+    const d = DRAFTS[k];
+    try { const r = await dispatch(d); if (r === 'queued') queued = true; sent.push(draftTitle(d)); delete DRAFTS[k]; rememberLast(d); }
+    catch (e) { errors.push(draftTitle(d) + ': ' + e.message); }
+  }
+  saveDrafts(); sending = false;
+  if (errors.length) toast('नहीं गया: ' + errors.join(' | '), { err: true, ms: 6000 });
+  if (sent.length) sentOk(sent.join(', '), queued); else { updateDock(); renderHome(); }
+}
+function sentOk(label, queued) {
+  document.querySelector('.overlay.cart')?.remove();
+  buzz(queued ? [20, 60, 20] : 30);
+  const ok = document.createElement('div');
+  ok.className = 'sentok';
+  ok.innerHTML = `<svg viewBox="0 0 24 24" width="84" height="84" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10.5" opacity=".35"/><path d="M7 12.5l3.2 3.2L17 9"/></svg>
+    <h2>${queued ? 'ऑर्डर सेव है' : 'किचन में भेज दिया'}</h2><p>${esc(label)}</p>${queued ? '<p>नेट आते ही अपने आप चला जाएगा</p>' : ''}`;
+  document.body.appendChild(ok);
+  setTimeout(async () => { ok.remove(); try { if (!queued) await loadOpen(); } catch (e) {} if (view === 'order') { cur = null; cart = {}; view = 'home'; } renderHome(); }, queued ? 1900 : 1100);
+}
+
+// ---------- taps ----------
+$('#app').addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('#stripBtn')) return openCart();
+  const tabBtn = t.closest('[data-tab]');
+  if (tabBtn && view === 'order') { tab = tabBtn.dataset.tab; q = ''; $('#search').value = ''; renderTabs(); refreshList(); window.scrollTo({ top: 0 }); return; }
+  const a = t.closest('[data-act]');
+  if (a && view === 'order') { setQty(+a.dataset.id, a.dataset.act === 'add' ? 1 : -1); syncCart(); return; }
+  if (view !== 'home') return;
+  if (t.closest('#newParcel')) return startOrder({ type: 'takeaway', orderId: null });
+  const cf = t.closest('[data-conf]');
+  if (cf) {
+    const [cid, cmode] = cf.dataset.conf.split(':');
+    CONFIRMS = CONFIRMS.filter(c => c.id !== +cid); renderHome();
+    api(`/api/orders/${cid}/confirm-payment`, { body: { mode: cmode } }).then(() => toast('धन्यवाद, लिख लिया')).catch(x => { toast(x.message, true); loadConfirms().then(renderHome); });
+    return;
+  }
+  const sv = t.closest('[data-served]');
+  if (sv) {
+    const id = +sv.dataset.served;
+    OPEN.forEach(o => o.kots.forEach(k => { if (k.id === id) k.served_at = Date.now(); }));
+    renderHome();
+    api(`/api/kots/${id}/served`, { method: 'POST', body: {} }).then(loadOpen).then(renderHome).catch(x => { toast(x.message, true); loadOpen().then(renderHome); });
+    return;
+  }
+  if (t.closest('#lastBtn')) { const l = lastOpen(); if (l) return startOrder({ type: l.type, table_no: l.table_no, orderId: l.orderId }); }
+  const tb = t.closest('[data-t]'), p = t.closest('[data-p]');
+  if (tb) { const n = +tb.dataset.t, o = OPEN.find(x => x.type === 'dine_in' && x.table_no === n); return startOrder({ type: 'dine_in', table_no: n, orderId: o ? o.id : null }); }
+  if (p) return startOrder({ type: 'takeaway', orderId: +p.dataset.p });
+});
+$('#app').addEventListener('input', e => {
+  if (e.target.id === 'search') { q = e.target.value; renderTabs(); refreshList(); }
+  if (e.target.id === 'cust') { customer = e.target.value; persist(); }
+});
+$('#dock').addEventListener('click', e => {
+  if (e.target.closest('#openCart')) openCart();
+  if (e.target.closest('#sendBtn')) send();
+  if (e.target.closest('#sendAll')) sendAll();
+});
+$('#back').onclick = () => {
+  const had = count();
+  goHome();
+  if (had) toast('ऑर्डर रखा है। नीचे "सब किचन भेजें" से भेजें', { ms: 3200 });
+};
+
+init().catch(e => {
+  if (e.message === 'login') return;
+  $('#app').innerHTML = '<div class="empty"><p><b>पेज लोड नहीं हो पाया।</b></p><p>नेट देखें और पेज को रीफ्रेश करें।</p><button class="primary" onclick="location.reload()">फिर से खोलें</button></div>';
+});
+</script>
+</body>
+</html>

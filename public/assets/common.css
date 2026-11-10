@@ -1,0 +1,149 @@
+/* The Baithak Stories - shared look.
+   Colours come from the logo: deep green on warm cream. Brass is for "needs attention", crimson for "stop / remove". */
+/* Three looks. Each has a light and a dark version. Pages pick one with <html data-palette="..." data-theme="...">. */
+:root{
+  color-scheme:light;
+  --maxw:1280px;
+  --font-body:"Mukta","Noto Sans Devanagari","Nirmala UI","Segoe UI",system-ui,sans-serif;
+  --font-hindi-display:"Noto Serif Devanagari","Bodoni Moda",Georgia,serif;
+  /* look 1: Baithak green (the logo colours) */
+  --ground:#ebe8de; --paper:#f7f5ee; --ink:#13241d; --muted:#5b6861; --line:#d2cebf; --line-soft:#e1ddd0;
+  --brand:#0a5a44; --brand-ink:#f4f2ea; --brand-soft:#d5e6dc;
+  --brass:#8f6212; --brass-soft:#f0e1ba;
+  --crimson:#9c3328; --crimson-soft:#f3d8d2;
+  --bar:#0a5a44; --bar-ink:#f4f2ea; --logo:#0a5a44;
+  --font-display:"Bodoni Moda","Noto Serif Devanagari",Georgia,"Times New Roman",serif; --display-weight:500;
+  --tile-r:999px 999px 14px 14px; --tile-ratio:4/5; --tile-justify:flex-end; --tile-no:46px;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0c1612; --paper:#13221c; --ink:#ebe8de; --muted:#98a9a0; --line:#28392f; --line-soft:#1d2d25;
+  --brand:#5cc09b; --brand-ink:#08150f; --brand-soft:#1a3a2e;
+  --brass:#dcae55; --brass-soft:#3a2f14;
+  --crimson:#e88a7b; --crimson-soft:#41211c;
+  --bar:#0a3f31; --bar-ink:#ebe8de; --logo:#ebe8de;
+}
+/* look 2: Chikan indigo - bright and crisp, soft square tiles, clean sans headings */
+:root[data-palette="indigo"]{
+  color-scheme:light;
+  --ground:#f2f0ea; --paper:#ffffff; --ink:#181d36; --muted:#5a6079; --line:#d8d6df; --line-soft:#e8e6ee;
+  --brand:#2c3990; --brand-ink:#ffffff; --brand-soft:#e0e4f8;
+  --brass:#9a5200; --brass-soft:#fbe8c6;
+  --crimson:#a8281f; --crimson-soft:#f6d9d5;
+  --bar:#232e78; --bar-ink:#ffffff; --logo:#2c3990;
+  --font-display:"Mukta","Noto Sans Devanagari",system-ui,sans-serif; --display-weight:700;
+  --tile-r:22px; --tile-ratio:1/1; --tile-justify:center; --tile-no:40px;
+}
+:root[data-palette="indigo"][data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0d1122; --paper:#151a33; --ink:#ecebf6; --muted:#9aa0c2; --line:#272d4d; --line-soft:#1c2140;
+  --brand:#93a2ff; --brand-ink:#0a0e22; --brand-soft:#222a5c;
+  --brass:#f2b95e; --brass-soft:#3b2d12;
+  --crimson:#ff9186; --crimson-soft:#43211f;
+  --bar:#18205a; --bar-ink:#ecebf6; --logo:#ecebf6;
+}
+/* look 3: Nawabi night - parchment and gold, round "thaali" tiles */
+:root[data-palette="nawabi"]{
+  color-scheme:light;
+  --ground:#efe6d2; --paper:#faf5e8; --ink:#231c10; --muted:#6a5d44; --line:#d9ccaf; --line-soft:#e6dcc4;
+  --brand:#7d5a0b; --brand-ink:#fff9e8; --brand-soft:#efdfb2;
+  --brass:#a2441a; --brass-soft:#f6d9c4;
+  --crimson:#9d2f25; --crimson-soft:#f2d4cd;
+  --bar:#2a2114; --bar-ink:#f0dfb0; --logo:#7d5a0b;
+  --tile-r:50%; --tile-ratio:1/1; --tile-justify:center; --tile-no:38px;
+}
+:root[data-palette="nawabi"][data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#110f0c; --paper:#1a1713; --ink:#f0e6d0; --muted:#aa9f89; --line:#342f27; --line-soft:#26221c;
+  --brand:#d9ac4f; --brand-ink:#1b1405; --brand-soft:#3a2e15;
+  --brass:#ec9358; --brass-soft:#3f2616;
+  --crimson:#ff7f72; --crimson-soft:#43211d;
+  --bar:#070605; --bar-ink:#d9ac4f; --logo:#d9ac4f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+a{color:inherit}
+html{-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.4}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.display{font-family:var(--font-display);font-weight:var(--display-weight)}
+.hi-display{font-family:var(--font-hindi-display);font-weight:600}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:6px;min-height:58px;padding:6px max(10px,calc((100% - var(--maxw)) / 2 + 4px));background:var(--bar);color:var(--bar-ink)}
+.bar h1{flex:1;margin:0;font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar a,.bar button{color:var(--bar-ink)}
+.bar a{text-decoration:none;padding:8px 12px;border-radius:10px;font-weight:600}
+.bar a.on,.bar a:hover{background:rgba(255,255,255,.14)}
+.bar .iconbtn{background:transparent;border:0;min-height:44px;min-width:44px;padding:0;display:grid;place-items:center;border-radius:12px}
+.bar .iconbtn:hover{background:rgba(255,255,255,.14)}
+.bar .tools{display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end;order:2;min-width:0}
+.bar .icons{display:flex;align-items:center;order:3;margin-left:auto}
+@media(max-width:700px){
+  .bar{flex-wrap:wrap}
+  .bar .brand{order:1;flex:1}
+  .bar .icons{order:2;margin-left:0}
+  .bar h1{order:1}
+  .bar .tools{order:3;flex:1 0 100%;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .bar .tools::-webkit-scrollbar{display:none}
+  .bar .tools>*{flex:none}
+}
+@media(max-width:430px){
+  .brand span{font-size:19px}
+  .brand .the{display:none}
+  .bar .iconbtn{min-width:40px}
+}
+.brand{display:flex;align-items:center;gap:10px;color:var(--bar-ink);text-decoration:none;flex:1;min-width:0}
+.brand img{height:38px;width:auto;display:block}
+.brand .the{font-style:normal}
+.brand span{font-family:var(--font-display);font-size:21px;font-weight:var(--display-weight);letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- controls ---------- */
+button{cursor:pointer;border:1.5px solid var(--line);background:var(--paper);border-radius:12px;padding:10px 16px;min-height:46px;font-weight:600;transition:background .12s,border-color .12s,transform .06s}
+button:active:not(:disabled){transform:scale(.97)}
+button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+button.ok{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+button.danger{color:var(--crimson);border-color:color-mix(in srgb,var(--crimson) 45%,var(--line))}
+button.ghost{background:transparent;border-color:transparent}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{width:100%;min-height:46px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper)}
+input:-webkit-autofill,input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px var(--paper) inset;-webkit-text-fill-color:var(--ink);caret-color:var(--ink)}
+input::placeholder{color:var(--muted);opacity:.8}
+input[type=checkbox]{width:auto;min-height:0;accent-color:var(--brand)}
+main{padding:14px;max-width:var(--maxw);margin:0 auto}
+@media(min-width:900px){main{padding:22px 24px 40px}}
+
+/* ---------- surfaces ---------- */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px}
+.badge{display:inline-block;border-radius:999px;padding:1px 10px;font-size:13px;font-weight:600;background:var(--brass-soft);color:var(--brass);margin-left:6px;vertical-align:middle}
+.badge.red{background:var(--crimson-soft);color:var(--crimson)}
+.badge.green{background:var(--brand-soft);color:var(--brand)}
+.tag{display:inline-block;background:var(--brand-soft);color:var(--brand);border-radius:8px;padding:0 8px;font-size:13px;font-weight:600;margin-left:6px;vertical-align:middle}
+.pill{display:inline-block;background:var(--line-soft);border-radius:8px;padding:0 8px;font-size:13px;font-weight:600}
+.banner{background:var(--brass-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--brass) 40%,transparent);border-radius:12px;padding:10px 14px;margin-bottom:12px}
+
+/* ---------- popups ---------- */
+.overlay{position:fixed;inset:0;background:rgba(6,16,12,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.overlay .box{background:var(--ground);width:100%;max-width:580px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));animation:rise .2s ease-out}
+.overlay .box::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:2px auto 12px}
+.overlay .box h3{margin:0 0 12px;font-family:var(--font-hindi-display);font-size:22px;font-weight:600}
+.overlay .opt{display:block;width:100%;text-align:left;margin-bottom:8px}
+@keyframes fade{from{opacity:0}}
+.overlay.still,.overlay.still .box{animation:none}
+@keyframes rise{from{transform:translateY(24px);opacity:.6}}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translate(-50%,8px);background:var(--ink);color:var(--ground);padding:10px 12px 10px 18px;border-radius:14px;z-index:60;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:92vw;display:flex;align-items:center;gap:14px;font-weight:600}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#toast.err{background:var(--crimson);color:#fff}
+#toast button{min-height:36px;padding:4px 12px;background:rgba(255,255,255,.18);border:0;color:inherit;border-radius:10px}
+
+/* ---------- tables ---------- */
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{font-size:14px;color:var(--muted);font-weight:500}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

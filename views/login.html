@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a5a44">
+<link rel="manifest" href="/assets/manifest.webmanifest">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>{{name}}</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom))}
+ .logo{width:min(200px,50vw);aspect-ratio:900/1077;margin:0 auto 18px;background:var(--logo);-webkit-mask:url(/assets/brand/logo-green.png) center/contain no-repeat;mask:url(/assets/brand/logo-green.png) center/contain no-repeat}
+ form{width:min(340px,100%);text-align:center}
+ h1{margin:0;font-family:var(--font-hindi-display);font-size:26px;font-weight:600;line-height:1.3}
+ .sub{color:var(--muted);margin:2px 0 16px;font-size:15px}
+ #pin{font-size:30px;text-align:center;letter-spacing:.5em;padding-left:.5em;min-height:60px;border-radius:16px}
+ #err{color:var(--crimson);min-height:3.2em;margin:8px 0;font-weight:600;line-height:1.35}
+ form button.primary{width:100%;min-height:56px;font-size:20px}
+ .corner{position:fixed;top:10px;right:10px;display:flex;gap:2px}
+ .corner button{background:transparent;border:0;min-height:44px;min-width:44px;padding:0;display:grid;place-items:center;border-radius:12px;color:var(--muted)}
+ .back{position:fixed;top:12px;left:10px;display:flex;align-items:center;gap:2px;color:var(--muted);text-decoration:none;min-height:44px;padding:0 10px;border-radius:12px;font-weight:600}
+ .back:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<a class="back" href="/?choose"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span id="backTx">वापस</span></a>
+<div class="corner"><button data-look-btn aria-label="रंग-रूप बदलें"></button><button data-theme-btn aria-label="थीम बदलें"></button></div>
+<div class="logo" role="img" aria-label="{{name}}"></div>
+<form id="f">
+  <h1 id="h">वेटर लॉगिन</h1>
+  <p class="sub" id="s">Waiter login</p>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" autofocus maxlength="12" aria-describedby="err" aria-label="PIN">
+  <p id="err" role="alert"></p>
+  <button class="primary" id="go">अंदर जाएँ</button>
+</form>
+<script src="/assets/common.js?v={{v}}"></script>
+<script>
+mountThemeButtons();
+const qs = new URLSearchParams(location.search).get('as');
+const door = ['admin', 'kitchen'].includes(qs) ? qs : 'waiter';
+const hi = door !== 'admin';
+document.documentElement.lang = hi ? 'hi' : 'en';
+if (door === 'kitchen') {
+  document.getElementById('h').textContent = 'रसोई लॉगिन';
+  document.getElementById('s').textContent = 'Kitchen login';
+}
+if (!hi) {
+  document.getElementById('h').textContent = 'Admin login';
+  document.getElementById('s').textContent = 'एडमिन लॉगिन: counter and owner';
+  document.getElementById('go').textContent = 'Log in';
+  document.getElementById('backTx').textContent = 'Back';
+}
+const HOME = { waiter: '/waiter', kitchen: '/kitchen', counter: '/counter', owner: '/owner' };
+const DOOR_HI = { waiter: 'वेटर', kitchen: 'रसोई', admin: 'एडमिन' };
+const DOOR_EN = { waiter: 'Waiter', kitchen: 'Kitchen', admin: 'Admin' };
+document.getElementById('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = document.getElementById('err'); err.textContent = '';
+  try {
+    const r = await api('/api/login', { body: { pin: document.getElementById('pin').value, as: door } });
+    location.href = HOME[r.role] || '/';
+  } catch (x) {
+    if (x.status === 401) err.textContent = hi ? 'पिन गलत है। फिर से डालें।' : 'Wrong PIN. Try again.';
+    else if (x.status === 403 && x.data && x.data.door) err.textContent = hi
+      ? 'यह ' + DOOR_HI[x.data.door] + ' का पिन है। पीछे जाकर "' + DOOR_HI[x.data.door] + '" चुनें।'
+      : 'This PIN belongs to the ' + DOOR_EN[x.data.door] + ' door. Go back and choose ' + DOOR_EN[x.data.door] + '.';
+    else if (x.status === 429) err.textContent = hi ? 'बहुत बार गलत पिन डाला गया। 10 मिनट बाद कोशिश करें।' : 'Too many wrong PINs. Try again in 10 minutes.';
+    else err.textContent = x.message;
+    document.getElementById('pin').select();
+  }
+});
+</script>
+</body>
+</html>

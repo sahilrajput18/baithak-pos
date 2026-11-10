@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a5a44">
+<link rel="icon" href="/assets/brand/favicon.png">
+<title>Owner – The Baithak Stories</title>
+<script>(function(){var d=document.documentElement;d.dataset.palette='{{look}}';d.dataset.theme='{{theme}}';try{var l=localStorage.getItem('look');if(l)d.dataset.palette=l;var t=localStorage.getItem('theme');if(t)d.dataset.theme=t}catch(e){}})()</script>
+<link rel="stylesheet" href="/assets/fonts.css?v={{v}}">
+<link rel="stylesheet" href="/assets/common.css?v={{v}}">
+<style>
+ html{font-size:16px}
+ .viz{--series-1:var(--brand);--grid:var(--line-soft);--ink2:var(--muted)}
+ .tabs{display:flex;gap:2px;flex:1 0 auto}
+ .tabs a{cursor:pointer;white-space:nowrap;border-radius:10px}
+ .datebar{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+ .datebar input{flex:1;min-width:0;width:auto}
+ .datebar button{min-width:46px;flex:none}
+ #export{margin-top:24px}
+ .exrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+ .exrow input{flex:1 1 150px;width:auto;min-width:0}
+ h3{margin:0 0 10px;font-family:var(--font-display);font-size:22px;font-weight:var(--display-weight)}
+ /* the day at a glance: one ruled strip, like a ledger line */
+ .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px}
+ .kpi.card{border:0;border-radius:0;background:transparent;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);margin:-1px -1px 0 0;padding:16px}
+ .kpi .l{font-size:14px;color:var(--muted)}
+ .kpi .v{font-family:var(--font-display);font-size:36px;line-height:1.1;font-weight:var(--display-weight);font-variant-numeric:tabular-nums;margin:2px 0}
+ .kpi .s{font-size:14px;color:var(--muted)}
+ .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ @media(max-width:780px){.two{grid-template-columns:1fr}}
+ .chart{display:flex;align-items:flex-end;gap:4px;height:160px;border-bottom:1px solid var(--grid);padding-top:20px}
+ .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;position:relative;cursor:default}
+ .col .bar1{width:100%;max-width:36px;background:var(--series-1);border-radius:5px 5px 0 0;min-height:0}
+ .col:hover .bar1,.col.hot .bar1{filter:brightness(.82)}
+ .col .pk{position:absolute;top:-18px;font-size:13px;font-weight:700;color:var(--ink2)}
+ .xl{display:flex;gap:4px;font-size:12px;color:var(--muted);margin-top:4px}
+ .xl span{flex:1;text-align:center}
+ .tip{min-height:1.5em;font-size:14px;color:var(--ink2);margin-bottom:4px}
+ .hbar{height:10px;background:var(--series-1);border-radius:0 5px 5px 0;min-width:1px}
+ .ord{border-bottom:1px solid var(--line-soft);padding:10px 0}
+ .ord summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+ .ord.cancelled{color:var(--muted)}
+ .mrow{display:grid;grid-template-columns:1.2fr 1.2fr .8fr .8fr 90px 90px;gap:8px;margin-bottom:8px;align-items:center}
+ @media(max-width:780px){.mrow{grid-template-columns:1fr 1fr}}
+ .mrow input{min-height:42px;padding:6px 10px}
+ .catHead{margin:22px 0 8px;font-family:var(--font-display);font-size:22px;color:var(--brand)}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/owner"><img src="/assets/brand/mark-cream.png" alt="" width="38" height="38"><span><i class="the">The </i>Baithak Stories</span></a>
+  <div class="tools">
+    <nav class="tabs" id="tabs">
+      <a data-t="dash" class="on">Dashboard</a><a data-t="orders">Orders</a><a data-t="appr">Approvals <span id="apprN" class="badge red hidden"></span></a><a data-t="menu">Menu</a>
+    </nav>
+    <a href="/counter">Counter</a>
+    <a href="/waiter">Waiter</a>
+    <a href="/owner/qr" target="_blank" rel="noopener">Table QR codes</a>
+  </div>
+  <div class="icons">
+    <button class="iconbtn" data-look-btn aria-label="Change look"></button>
+    <button class="iconbtn" data-theme-btn aria-label="Switch theme"></button>
+    <button class="iconbtn" id="logoutBtn" aria-label="Log out"></button>
+  </div>
+</header>
+<main class="viz">
+  <div id="banner"></div>
+  <div class="datebar" id="datebar">
+    <button id="prev" aria-label="Previous day">‹</button><input type="date" id="date"><button id="next" aria-label="Next day">›</button><button id="today">Today</button>
+  </div>
+  <section id="dash"></section>
+  <section id="orders" class="hidden"></section>
+  <section id="appr" class="hidden"></section>
+  <section id="menu" class="hidden"></section>
+  <footer id="export" class="card">
+    <h3>Download orders</h3>
+    <div class="exrow"><input type="date" id="from" aria-label="From date"><span class="muted">to</span><input type="date" id="to" aria-label="To date"><a id="csv"><button>Download CSV</button></a></div>
+    <p class="muted" style="margin:8px 0 0;font-size:14px">A spreadsheet file with one row per order. Keep a copy every week as a backup.</p>
+  </footer>
+</main>
+<div id="toast"></div>
+<script src="/assets/common.js?v={{v}}"></script>
+<script>
+let ME, tab = 'dash', date = todayIST(), tableView = false, MENU = [];
+const $ = s => document.querySelector(s);
+const label = o => o.type === 'dine_in' ? 'Table ' + o.table_no : 'Parcel' + (o.customer ? ' – ' + o.customer : '');
+const hr12 = h => (h % 12 || 12) + (h < 12 ? 'am' : 'pm');
+const dayName = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.t === t));
+  ['dash', 'orders', 'appr', 'menu'].forEach(s => $('#' + s).classList.toggle('hidden', s !== t));
+  $('#datebar').classList.toggle('hidden', t === 'menu' || t === 'appr' && false);
+  $('#export').classList.toggle('hidden', t === 'menu');
+  refresh();
+}
+$('#tabs').onclick = e => { const a = e.target.closest('a'); if (a) setTab(a.dataset.t); };
+$('#date').onchange = e => { date = e.target.value || todayIST(); refresh(); };
+$('#prev').onclick = () => shift(-1); $('#next').onclick = () => shift(1);
+$('#today').onclick = () => { date = todayIST(); refresh(); };
+function shift(n) { const d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); date = d.toISOString().slice(0, 10); refresh(); }
+function setCsv() { $('#csv').href = `/api/export.csv?from=${$('#from').value}&to=${$('#to').value}`; }
+$('#from').onchange = $('#to').onchange = setCsv;
+
+async function refresh() {
+  $('#date').value = date;
+  try {
+    if (tab === 'dash') await renderDash();
+    if (tab === 'orders') await renderOrders();
+    if (tab === 'appr') await renderAppr();
+    if (tab === 'menu') await renderMenu();
+    updatePending();
+  } catch (e) { if (e.message !== 'login') toast(e.message, true); }
+}
+async function updatePending() {
+  const p = await api('/api/voids?pending=1');
+  const n = $('#apprN'); n.textContent = p.length; n.classList.toggle('hidden', !p.length);
+}
+
+// ---------- dashboard ----------
+async function renderDash() {
+  const [s, range, chk] = await Promise.all([api('/api/stats?date=' + date), api('/api/stats/range?days=14'), api('/api/payments/checks?date=' + date)]);
+  const o = s.orders, sa = s.sales;
+  const maxHour = Math.max(1, ...s.hourly.map(h => h.orders));
+  const hrs = s.hourly.map(h => h.hour);
+  const lo = Math.min(11, ...hrs), hi = Math.max(22, ...hrs);
+  const byHour = {}; s.hourly.forEach(h => byHour[h.hour] = h.orders);
+  const peak = s.hourly.slice().sort((a, b) => b.orders - a.orders)[0];
+  let cols = '', xl = '', trows = '';
+  for (let h = lo; h <= hi; h++) {
+    const n = byHour[h] || 0;
+    cols += `<div class="col" data-tip="${hr12(h)}–${hr12(h + 1)}: ${n} order${n === 1 ? '' : 's'}" title="${hr12(h)}: ${n} orders">
+      ${peak && peak.hour === h && n ? `<span class="pk">${n}</span>` : ''}<div class="bar1" style="height:${Math.round(n / maxHour * 100)}%"></div></div>`;
+    xl += `<span>${(h - lo) % 2 === 0 ? hr12(h) : ''}</span>`;
+    trows += `<tr><td>${hr12(h)}–${hr12(h + 1)}</td><td class="n">${n}</td></tr>`;
+  }
+  const maxSales = Math.max(1, ...range.map(r => r.sales));
+  $('#dash').innerHTML = `
+  ${s.voids.pending ? `<div class="banner"><b>${s.voids.pending}</b> item-removal request(s) waiting for your approval. <a href="#" onclick="setTab('appr');return false">Review</a></div>` : ''}
+  ${payChecks(chk)}
+  <div class="kpis">
+    <div class="card kpi"><div class="l">Orders</div><div class="v">${o.total}</div><div class="s">Dine-in ${o.dine_in}, parcel ${o.takeaway}${o.open ? ', ' + o.open + ' open' : ''}${o.cancelled ? ', ' + o.cancelled + ' cancelled' : ''}</div></div>
+    <div class="card kpi"><div class="l">Sales</div><div class="v">${rupee(sa.total)}</div><div class="s">${sa.bills} bills, average ${rupee(sa.avg_bill)}</div></div>
+    <div class="card kpi"><div class="l">Items sold</div><div class="v">${s.items_sold}</div><div class="s">${peak && peak.orders ? 'Busiest hour: ' + hr12(peak.hour) + ' (' + peak.orders + ' orders)' : 'No orders yet'}</div></div>
+    <div class="card kpi"><div class="l">Cash in hand</div><div class="v">${rupee(sa.cash)}</div><div class="s">UPI ${rupee(sa.upi)}, card ${rupee(sa.card)}</div></div>
+    <div class="card kpi"><div class="l">Removed items</div><div class="v">${s.voids.count}</div><div class="s">${rupee(s.voids.value)} removed${sa.discount ? ', discounts ' + rupee(sa.discount) : ''}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3>Orders by hour – ${dayName(date)}</h3><button class="ghost" id="tv">${tableView ? 'Chart' : 'Table'} view</button></div>
+    ${tableView ? `<table><tr><th>Hour</th><th class="n">Orders</th></tr>${trows}</table>` : `<div class="tip" id="tip">${peak && peak.orders ? 'Touch or hover a bar for the count.' : 'No orders on this day.'}</div><div class="chart">${cols}</div><div class="xl">${xl}</div>`}
+  </div>
+  <div class="two">
+    <div class="card"><h3>Top items</h3><table><tr><th>Item</th><th class="n">Qty</th><th class="n">Sales</th></tr>
+      ${s.top_items.map(i => `<tr><td>${esc(i.name)}${i.variant ? ' <span class="pill">' + esc(i.variant) + '</span>' : ''}</td><td class="n">${i.qty}</td><td class="n">${rupee(i.revenue)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">No items yet</td></tr>'}</table></div>
+    <div class="card"><h3>Last 14 days</h3><table><tr><th>Day</th><th class="n">Orders</th><th>Sales</th></tr>
+      ${range.slice().reverse().map(r => `<tr data-d="${r.date}" style="cursor:pointer;${r.date === date ? 'background:var(--soft)' : ''}"><td>${dayName(r.date)}</td><td class="n">${r.orders}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="hbar" style="width:${Math.round(r.sales / maxSales * 90)}px"></div><span style="font-variant-numeric:tabular-nums">${rupee(r.sales)}</span></div></td></tr>`).join('')}</table></div>
+  </div>`;
+  $('#tv')?.addEventListener('click', () => { tableView = !tableView; renderDash(); });
+  document.querySelectorAll('#dash tr[data-d]').forEach(tr => tr.onclick = () => { date = tr.dataset.d; refresh(); });
+  document.querySelectorAll('#dash .col').forEach(c => {
+    const show = () => { $('#tip').textContent = c.dataset.tip; document.querySelectorAll('.col.hot').forEach(x => x.classList.remove('hot')); c.classList.add('hot'); };
+    c.addEventListener('mouseenter', show); c.addEventListener('click', show);
+  });
+}
+
+// ---------- payment checks: the counter's Cash/UPI/Card entry against what the waiter saw at the table ----------
+const MODE = { cash: 'Cash', upi: 'UPI', card: 'Card', split: 'Cash + Online' };
+function payChecks(c) {
+  if (!c.dine_in_paid) return '';
+  const bad = c.open_mismatches;
+  const sum = `${c.agreed} of ${c.dine_in_paid} table payments matched` + (c.waiting ? `, ${c.waiting} not yet confirmed by the waiter` : '') + (c.unseen ? `, ${c.unseen} marked "did not see" (older entries)` : '') + '.';
+  let h = `<div class="card" style="margin-bottom:12px;${bad.length ? 'border-color:var(--crimson)' : ''}"><h3>Payment checks</h3><div class="muted" style="margin-bottom:${bad.length ? 10 : 0}px">${sum}</div>`;
+  h += bad.map(r => `<div class="ord"><div><b>${r.type === 'dine_in' ? 'Table ' + r.table_no : 'Parcel'}</b> · bill ${r.bill_no} · ${rupee(r.total)} · ${timeStr(r.paid_at)}</div>
+    <div>Counter marked <b>${esc(payText(r))}</b>. Waiter saw <b>${MODE[r.pay_confirm]}</b>.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button data-fix="${r.id}:${r.pay_mode}:${r.total}">Counter was right (${MODE[r.pay_mode]})</button><button class="danger" data-fix="${r.id}:${r.pay_confirm}:${r.total}">Waiter was right: change to ${MODE[r.pay_confirm]}</button></div></div>`).join('');
+  if (c.resolved.length) h += `<details style="margin-top:8px"><summary class="muted">${c.resolved.length} settled by you</summary>` + c.resolved.map(r =>
+    `<div class="muted" style="padding:4px 0">${r.type === 'dine_in' ? 'Table ' + r.table_no : 'Parcel'} · bill ${r.bill_no} · was ${MODE[r.pay_fixed_from]}, now ${esc(payText(r))} · ${esc(r.pay_fixed_reason || '')}</div>`).join('') + '</details>';
+  return h + '</div>';
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-fix]');
+  if (!b) return;
+  const [id, mode, total] = b.dataset.fix.split(':');
+  const body = { mode };
+  if (mode === 'split' && !b.textContent.startsWith('Counter was right')) {       // changing to cash + online needs the amounts
+    const v = prompt('The bill was ₹' + total + '. How much of it was paid in cash? (the rest counts as online)');
+    if (v === null) return;
+    body.cash = Number(v);
+  }
+  try { await api(`/api/orders/${id}/fix-payment`, { body }); toast('Saved'); refresh(); } catch (x) { toast(x.message, true); }
+});
+
+// ---------- orders log ----------
+async function renderOrders() {
+  const list = await api('/api/orders?date=' + date);
+  $('#orders').innerHTML = `<div class="card"><h3>${list.length} order(s) – ${dayName(date)}</h3>` + (list.map(o => {
+    const voided = o.items.filter(i => i.status === 'voided').length;
+    return `<details class="ord ${o.status === 'cancelled' ? 'cancelled' : ''}"><summary><span><b>#${o.day_no}</b> ${timeStr(o.created_at)} - ${esc(label(o))}
+      ${o.status === 'open' ? '<span class="badge">OPEN</span>' : ''}${o.status === 'cancelled' ? '<span class="badge red">CANCELLED</span>' : ''}${voided ? `<span class="badge red">${voided} removed</span>` : ''}${o.discount ? '<span class="badge">discount</span>' : ''}</span>
+      <span><b>${rupee(o.status === 'paid' ? o.total : o.running_total)}</b> ${o.pay_mode ? '<span class="pill">' + esc(payText(o)) + '</span>' : ''}</span></summary>
+      <table style="margin-top:6px">${o.items.map(i => `<tr style="${i.status === 'voided' ? 'text-decoration:line-through;color:var(--muted)' : ''}"><td>${i.qty} × ${esc(i.name)}${i.variant ? ' (' + esc(i.variant) + ')' : ''}${i.void_reason ? ' <span class="muted">– ' + esc(i.void_reason) + ' [' + esc(i.void_by || '') + ']</span>' : ''}</td><td class="n">${rupee(i.qty * i.price)}</td></tr>`).join('')}</table>
+      <div class="muted">Taken by ${esc(o.created_by)}${o.bill_no ? ', bill ' + o.bill_no : ''}${o.discount ? ', discount ' + rupee(o.discount) : ''}${o.status === 'paid' && o.type === 'dine_in' ? ', waiter saw: ' + (o.pay_confirm ? (MODE[o.pay_confirm] || 'did not see') : 'not confirmed') : ''}${o.pay_fixed_from ? ', payment mode corrected from ' + (MODE[o.pay_fixed_from] || o.pay_fixed_from) : ''}</div></details>`;
+  }).join('') || '<p class="muted">No orders on this day.</p>') + '</div>';
+}
+
+// ---------- approvals ----------
+async function renderAppr() {
+  const [pend, log] = await Promise.all([api('/api/voids?pending=1'), api('/api/voids?date=' + date)]);
+  const rowT = i => `${i.qty} × ${esc(i.name)}${i.variant ? ' (' + esc(i.variant) + ')' : ''} · ${i.type === 'dine_in' ? 'Table ' + i.table_no : 'Parcel'} · order #${i.day_no}`;
+  $('#appr').innerHTML = `<div class="card" style="margin-bottom:12px"><h3>Waiting for approval</h3>` + (pend.map(i => `<div class="ord"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <span>${rowT(i)}<br><span class="muted">${esc(i.void_reason)} · asked by ${esc(i.void_by)} at ${timeStr(i.void_at)} · ${rupee(i.qty * i.price)}</span></span>
+      <span><button class="ok" data-dec="${i.id}" data-yes="1">Approve</button> <button data-dec="${i.id}" data-yes="0">Reject</button></span></div></div>`).join('') || '<p class="muted">Nothing waiting.</p>') + `</div>
+    <div class="card"><h3>Removed items – ${dayName(date)}</h3>` + (log.filter(i => i.status === 'voided').map(i => `<div class="ord">${rowT(i)}<br><span class="muted">${esc(i.void_reason)} · ${esc(i.void_by)} · ${timeStr(i.void_at)} · ${rupee(i.qty * i.price)}</span></div>`).join('') || '<p class="muted">None.</p>') + '</div>';
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-dec]');
+  if (!b) return;
+  try { await api(`/api/items/${b.dataset.dec}/void-decision`, { body: { approve: b.dataset.yes === '1' } }); toast('Done'); refresh(); } catch (x) { toast(x.message, true); }
+});
+
+// ---------- menu editor ----------
+async function renderMenu() {
+  MENU = await api('/api/menu');
+  const cats = [...new Set(MENU.map(m => m.category))];
+  let html = `<div class="card"><h3>Add an item</h3><div class="mrow" id="addrow">
+    <input id="a_cat" list="catlist" placeholder="Category (English)"><input id="a_cathi" placeholder="श्रेणी (हिंदी)">
+    <input id="a_name" placeholder="Name (English)"><input id="a_namehi" placeholder="नाम (हिंदी)">
+    <input id="a_price" type="number" placeholder="Price ₹"><button class="primary" id="a_add">Add</button></div>
+    <datalist id="catlist">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <div class="muted">Half/Full sizes are separate rows with the same name (use the Size fields below after adding).</div></div>
+    <p class="muted">Changes save automatically when you leave a field. Untick "On sale" when something runs out – the waiter will see "ख़त्म".</p>`;
+  cats.forEach(c => {
+    html += `<div class="catHead">${esc(c)} · ${esc(MENU.find(m => m.category === c).category_hi)}</div>`;
+    MENU.filter(m => m.category === c).forEach(m => {
+      html += `<div class="mrow" data-id="${m.id}" data-cat="${esc(m.category)}" data-cathi="${esc(m.category_hi)}">
+        <input data-f="name" value="${esc(m.name)}" title="Name"><input data-f="name_hi" value="${esc(m.name_hi)}" title="Hindi name">
+        <input data-f="variant" value="${esc(m.variant)}" placeholder="Size" title="Size (English)"><input data-f="variant_hi" value="${esc(m.variant_hi)}" placeholder="साइज़" title="Size (Hindi)">
+        <input data-f="price" type="number" value="${m.price}" title="Price">
+        <label style="display:flex;gap:4px;align-items:center"><input data-f="available" type="checkbox" ${m.available ? 'checked' : ''} style="width:auto;min-height:0"> On sale</label></div>`;
+    });
+  });
+  $('#menu').innerHTML = html;
+}
+$('#menu').addEventListener('change', async e => {
+  const row = e.target.closest('.mrow[data-id]');
+  if (!row) return;
+  const g = f => row.querySelector(`[data-f="${f}"]`);
+  try {
+    await api('/api/menu/' + row.dataset.id, { method: 'PUT', body: { category: row.dataset.cat, category_hi: row.dataset.cathi, name: g('name').value, name_hi: g('name_hi').value, variant: g('variant').value, variant_hi: g('variant_hi').value, price: g('price').value, available: g('available').checked } });
+    toast('Saved ✔');
+  } catch (x) { toast(x.message, true); }
+});
+$('#menu').addEventListener('click', async e => {
+  if (e.target.id !== 'a_add') return;
+  const v = id => document.getElementById(id).value;
+  try {
+    await api('/api/menu', { body: { category: v('a_cat'), category_hi: v('a_cathi') || v('a_cat'), name: v('a_name'), name_hi: v('a_namehi') || v('a_name'), price: v('a_price') } });
+    toast('Added ✔'); renderMenu();
+  } catch (x) { toast(x.message, true); }
+});
+
+async function init() {
+  $('#logoutBtn').innerHTML = ICON.out; $('#logoutBtn').onclick = logout; mountThemeButtons();
+  ME = await api('/api/me');
+  if (ME.defaultPins) $('#banner').innerHTML = '<div class="banner"><b>Change the PINs.</b> The app is using the default PINs (1111 / 2222 / 3333 / 9999). Set WAITER_PIN, COUNTER_PIN, KITCHEN_PIN and OWNER_PIN as environment variables on the server.</div>';
+  $('#from').value = $('#to').value = todayIST(); setCsv();
+  await refresh();
+  live(() => { if (tab !== 'menu') refresh(); });
+}
+init().catch(e => { if (e.message !== 'login') toast(e.message, true); });
+</script>
+</body>
+</html>
