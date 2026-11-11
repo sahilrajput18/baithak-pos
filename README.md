@@ -148,3 +148,22 @@ Customers open the Customer door (or scan a QR code) and see the full menu in Hi
 
 QR codes: in the Owner dashboard click "Table QR codes". It opens a printable sheet with one code per table plus one general menu code. Each table code opens the menu with that table number shown at the top.
 Open this page from your live Railway address (or set PUBLIC_URL), otherwise the codes will point to your own computer and will not work for customers.
+
+
+## Spends (daily expenses)
+Open **Spends** from the counter or owner screen. Pick a category, type what was bought, the quantity and the amount, and choose how it was paid: cash from the counter, UPI, bank (HDFC), or a partner's own pocket (with the partner's name). Regular buys show as one-tap chips.
+- The counter can add spends for today or yesterday and remove its own entries within an hour. Only the owner can edit or remove anything else. Removed entries are kept out of totals but not erased.
+- The owner dashboard shows Spends, Sales minus spends, and Cash after spends (cash sales less cash spends), plus a spends column in the last-14-days table.
+- Owner > Download records has a spends CSV for any date range.
+
+
+## Kitchen slips (printed token)
+When a waiter sends an order, the counter screen prints a small slip on the same printer: table, time, items in Hindi, and any note. Added items are marked "+ और जोड़ा" and a removed item prints a "रद्द करें" slip. Each slip prints once, even if the counter page is reloaded. If the printer is off, a yellow bar shows how many slips are waiting and they print as soon as it is connected (slips older than 20 minutes are skipped). Switch it off with the "Kitchen slips" tick at the top of the counter screen. "Reprint slip" sits next to each send in an order's detail. If the end of a slip is cut when you tear it, raise SLIP_FEED in views/counter.html from 3 to 4.
+
+
+## Languages
+Customer menu, counter and owner screens show English first with Hindi beside or underneath. The waiter screen is Hindi first with English underneath. The customer menu opens in English; guests can switch to Hindi with the button at the top. The kitchen screen and kitchen slips stay Hindi.
+
+
+## Keeping the printer connected
+Bluetooth only stays connected while the counter page stays open. On the counter screen, Kitchen, Spends, New order and Dashboard open on top of the counter instead of replacing it, so the printer stays connected. Use "Back to counter" (or the browser Back button) to return. Do not use the Counter link from other pages, and avoid reloading the counter page; after a reload, tap the printer button once to reconnect. A USB cable (COM port) reconnects by itself after a reload.

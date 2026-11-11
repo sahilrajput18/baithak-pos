@@ -1,3 +1,5 @@
+// a page opened inside the counter screen (?embed=1) hides its own navigation, so the counter page never reloads
+if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add('embed');
 async function api(path, opts) {
   opts = opts || {};
   const r = await fetch(path, {
@@ -18,6 +20,9 @@ const timeStr = ms => new Date(ms).toLocaleTimeString('en-IN', { hour: '2-digit'
 const dateStr = ms => new Date(ms).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 // how an order was paid, for people to read: Cash / UPI / Card / Cash ₹300 + Online ₹198
 const payText = o => o.pay_mode === 'split' ? 'Cash ' + rupee(o.pay_cash) + ' + Online ' + rupee(o.pay_online) : ({ cash: 'Cash', upi: 'UPI', card: 'Card' }[o.pay_mode] || '');
+// English name first, Hindi underneath-style (for the customer menu, counter and owner screens)
+const bi = i => esc(i.name || i.name_hi) + (i.variant ? ' (' + esc(i.variant) + ')' : '') +
+  (i.name_hi && i.name_hi !== i.name ? ' <span class="muted">' + esc(i.name_hi) + (i.variant_hi ? ' (' + esc(i.variant_hi) + ')' : '') + '</span>' : '');
 const todayIST = () => new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
 
 const ICON = {

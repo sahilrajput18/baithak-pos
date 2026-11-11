@@ -67,6 +67,7 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--brass);outline-offset:2px}
 .hidden{display:none!important}
+.embed .bar .nav-out,.embed .bar .icons,.embed .bar a.brand{display:none!important}
 .muted{color:var(--muted)}
 .display{font-family:var(--font-display);font-weight:var(--display-weight)}
 .hi-display{font-family:var(--font-hindi-display);font-weight:600}

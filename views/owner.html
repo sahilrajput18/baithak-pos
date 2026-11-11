@@ -54,8 +54,9 @@
     <nav class="tabs" id="tabs">
       <a data-t="dash" class="on">Dashboard</a><a data-t="orders">Orders</a><a data-t="appr">Approvals <span id="apprN" class="badge red hidden"></span></a><a data-t="menu">Menu</a>
     </nav>
-    <a href="/counter">Counter</a>
-    <a href="/waiter">Waiter</a>
+    <a class="nav-out" href="/counter">Counter</a>
+    <a class="nav-out" href="/spends">Spends</a>
+    <a class="nav-out" href="/waiter">Waiter</a>
     <a href="/owner/qr" target="_blank" rel="noopener">Table QR codes</a>
   </div>
   <div class="icons">
@@ -74,8 +75,8 @@
   <section id="appr" class="hidden"></section>
   <section id="menu" class="hidden"></section>
   <footer id="export" class="card">
-    <h3>Download orders</h3>
-    <div class="exrow"><input type="date" id="from" aria-label="From date"><span class="muted">to</span><input type="date" id="to" aria-label="To date"><a id="csv"><button>Download CSV</button></a></div>
+    <h3>Download records</h3>
+    <div class="exrow"><input type="date" id="from" aria-label="From date"><span class="muted">to</span><input type="date" id="to" aria-label="To date"><a id="csv"><button>Download orders</button></a><a id="csv2"><button>Download spends</button></a></div>
     <p class="muted" style="margin:8px 0 0;font-size:14px">A spreadsheet file with one row per order. Keep a copy every week as a backup.</p>
   </footer>
 </main>
@@ -101,7 +102,7 @@ $('#date').onchange = e => { date = e.target.value || todayIST(); refresh(); };
 $('#prev').onclick = () => shift(-1); $('#next').onclick = () => shift(1);
 $('#today').onclick = () => { date = todayIST(); refresh(); };
 function shift(n) { const d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); date = d.toISOString().slice(0, 10); refresh(); }
-function setCsv() { $('#csv').href = `/api/export.csv?from=${$('#from').value}&to=${$('#to').value}`; }
+function setCsv() { $('#csv').href = `/api/export.csv?from=${$('#from').value}&to=${$('#to').value}`; $('#csv2').href = `/api/expenses.csv?from=${$('#from').value}&to=${$('#to').value}`; }
 $('#from').onchange = $('#to').onchange = setCsv;
 
 async function refresh() {
@@ -122,7 +123,7 @@ async function updatePending() {
 // ---------- dashboard ----------
 async function renderDash() {
   const [s, range, chk] = await Promise.all([api('/api/stats?date=' + date), api('/api/stats/range?days=14'), api('/api/payments/checks?date=' + date)]);
-  const o = s.orders, sa = s.sales;
+  const o = s.orders, sa = s.sales, sp = s.spend;
   const maxHour = Math.max(1, ...s.hourly.map(h => h.orders));
   const hrs = s.hourly.map(h => h.hour);
   const lo = Math.min(11, ...hrs), hi = Math.max(22, ...hrs);
@@ -144,7 +145,9 @@ async function renderDash() {
     <div class="card kpi"><div class="l">Orders</div><div class="v">${o.total}</div><div class="s">Dine-in ${o.dine_in}, parcel ${o.takeaway}${o.open ? ', ' + o.open + ' open' : ''}${o.cancelled ? ', ' + o.cancelled + ' cancelled' : ''}</div></div>
     <div class="card kpi"><div class="l">Sales</div><div class="v">${rupee(sa.total)}</div><div class="s">${sa.bills} bills, average ${rupee(sa.avg_bill)}</div></div>
     <div class="card kpi"><div class="l">Items sold</div><div class="v">${s.items_sold}</div><div class="s">${peak && peak.orders ? 'Busiest hour: ' + hr12(peak.hour) + ' (' + peak.orders + ' orders)' : 'No orders yet'}</div></div>
-    <div class="card kpi"><div class="l">Cash in hand</div><div class="v">${rupee(sa.cash)}</div><div class="s">UPI ${rupee(sa.upi)}, card ${rupee(sa.card)}</div></div>
+    <div class="card kpi"><div class="l">Cash after spends</div><div class="v">${rupee(sa.cash - sp.cash)}</div><div class="s">Cash sales ${rupee(sa.cash)} less cash spends ${rupee(sp.cash)}. UPI ${rupee(sa.upi)}, card ${rupee(sa.card)}</div></div>
+    <div class="card kpi"><div class="l">Spends</div><div class="v">${rupee(sp.total)}</div><div class="s">${sp.count ? sp.count + ' entries' + (sp.top ? ', most on ' + esc(sp.top.category) + ' (' + rupee(sp.top.total) + ')' : '') : 'None entered. <a href="/spends">Add spends</a>'}</div></div>
+    <div class="card kpi"><div class="l">Sales minus spends</div><div class="v" style="${sa.total - sp.total < 0 ? 'color:var(--crimson)' : ''}">${rupee(sa.total - sp.total)}</div><div class="s">Before any spends not yet entered</div></div>
     <div class="card kpi"><div class="l">Removed items</div><div class="v">${s.voids.count}</div><div class="s">${rupee(s.voids.value)} removed${sa.discount ? ', discounts ' + rupee(sa.discount) : ''}</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
@@ -153,10 +156,10 @@ async function renderDash() {
   </div>
   <div class="two">
     <div class="card"><h3>Top items</h3><table><tr><th>Item</th><th class="n">Qty</th><th class="n">Sales</th></tr>
-      ${s.top_items.map(i => `<tr><td>${esc(i.name)}${i.variant ? ' <span class="pill">' + esc(i.variant) + '</span>' : ''}</td><td class="n">${i.qty}</td><td class="n">${rupee(i.revenue)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">No items yet</td></tr>'}</table></div>
-    <div class="card"><h3>Last 14 days</h3><table><tr><th>Day</th><th class="n">Orders</th><th>Sales</th></tr>
+      ${s.top_items.map(i => `<tr><td>${esc(i.name)}${i.variant ? ' <span class="pill">' + esc(i.variant) + '</span>' : ''}${i.name_hi && i.name_hi !== i.name ? '<br><span class="muted" style="font-size:13px">' + esc(i.name_hi) + '</span>' : ''}</td><td class="n">${i.qty}</td><td class="n">${rupee(i.revenue)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">No items yet</td></tr>'}</table></div>
+    <div class="card"><h3>Last 14 days</h3><table><tr><th>Day</th><th class="n">Orders</th><th>Sales</th><th class="n">Spends</th></tr>
       ${range.slice().reverse().map(r => `<tr data-d="${r.date}" style="cursor:pointer;${r.date === date ? 'background:var(--soft)' : ''}"><td>${dayName(r.date)}</td><td class="n">${r.orders}</td>
-      <td><div style="display:flex;align-items:center;gap:6px"><div class="hbar" style="width:${Math.round(r.sales / maxSales * 90)}px"></div><span style="font-variant-numeric:tabular-nums">${rupee(r.sales)}</span></div></td></tr>`).join('')}</table></div>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="hbar" style="width:${Math.round(r.sales / maxSales * 90)}px"></div><span style="font-variant-numeric:tabular-nums">${rupee(r.sales)}</span></div></td><td class="n">${r.spend ? rupee(r.spend) : ''}</td></tr>`).join('')}</table></div>
   </div>`;
   $('#tv')?.addEventListener('click', () => { tableView = !tableView; renderDash(); });
   document.querySelectorAll('#dash tr[data-d]').forEach(tr => tr.onclick = () => { date = tr.dataset.d; refresh(); });
@@ -201,7 +204,7 @@ async function renderOrders() {
     return `<details class="ord ${o.status === 'cancelled' ? 'cancelled' : ''}"><summary><span><b>#${o.day_no}</b> ${timeStr(o.created_at)} - ${esc(label(o))}
       ${o.status === 'open' ? '<span class="badge">OPEN</span>' : ''}${o.status === 'cancelled' ? '<span class="badge red">CANCELLED</span>' : ''}${voided ? `<span class="badge red">${voided} removed</span>` : ''}${o.discount ? '<span class="badge">discount</span>' : ''}</span>
       <span><b>${rupee(o.status === 'paid' ? o.total : o.running_total)}</b> ${o.pay_mode ? '<span class="pill">' + esc(payText(o)) + '</span>' : ''}</span></summary>
-      <table style="margin-top:6px">${o.items.map(i => `<tr style="${i.status === 'voided' ? 'text-decoration:line-through;color:var(--muted)' : ''}"><td>${i.qty} × ${esc(i.name)}${i.variant ? ' (' + esc(i.variant) + ')' : ''}${i.void_reason ? ' <span class="muted">– ' + esc(i.void_reason) + ' [' + esc(i.void_by || '') + ']</span>' : ''}</td><td class="n">${rupee(i.qty * i.price)}</td></tr>`).join('')}</table>
+      <table style="margin-top:6px">${o.items.map(i => `<tr style="${i.status === 'voided' ? 'text-decoration:line-through;color:var(--muted)' : ''}"><td>${i.qty} × ${bi(i)}${i.void_reason ? ' <span class="muted">– ' + esc(i.void_reason) + ' [' + esc(i.void_by || '') + ']</span>' : ''}</td><td class="n">${rupee(i.qty * i.price)}</td></tr>`).join('')}</table>
       <div class="muted">Taken by ${esc(o.created_by)}${o.bill_no ? ', bill ' + o.bill_no : ''}${o.discount ? ', discount ' + rupee(o.discount) : ''}${o.status === 'paid' && o.type === 'dine_in' ? ', waiter saw: ' + (o.pay_confirm ? (MODE[o.pay_confirm] || 'did not see') : 'not confirmed') : ''}${o.pay_fixed_from ? ', payment mode corrected from ' + (MODE[o.pay_fixed_from] || o.pay_fixed_from) : ''}</div></details>`;
   }).join('') || '<p class="muted">No orders on this day.</p>') + '</div>';
 }
@@ -209,7 +212,7 @@ async function renderOrders() {
 // ---------- approvals ----------
 async function renderAppr() {
   const [pend, log] = await Promise.all([api('/api/voids?pending=1'), api('/api/voids?date=' + date)]);
-  const rowT = i => `${i.qty} × ${esc(i.name)}${i.variant ? ' (' + esc(i.variant) + ')' : ''} · ${i.type === 'dine_in' ? 'Table ' + i.table_no : 'Parcel'} · order #${i.day_no}`;
+  const rowT = i => `${i.qty} × ${bi(i)} · ${i.type === 'dine_in' ? 'Table ' + i.table_no : 'Parcel'} · order #${i.day_no}`;
   $('#appr').innerHTML = `<div class="card" style="margin-bottom:12px"><h3>Waiting for approval</h3>` + (pend.map(i => `<div class="ord"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
       <span>${rowT(i)}<br><span class="muted">${esc(i.void_reason)} · asked by ${esc(i.void_by)} at ${timeStr(i.void_at)} · ${rupee(i.qty * i.price)}</span></span>
       <span><button class="ok" data-dec="${i.id}" data-yes="1">Approve</button> <button data-dec="${i.id}" data-yes="0">Reject</button></span></div></div>`).join('') || '<p class="muted">Nothing waiting.</p>') + `</div>

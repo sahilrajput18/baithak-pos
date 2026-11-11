@@ -54,11 +54,16 @@ CREATE TABLE IF NOT EXISTS login_fail(ip TEXT, at INTEGER);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_paid ON orders(paid_at);
 CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);
+CREATE TABLE IF NOT EXISTS expenses(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, category TEXT, item TEXT, qty REAL, unit TEXT, amount REAL,
+  paid_from TEXT, paid_by TEXT, supplier TEXT, note TEXT, created_by TEXT, created_at INTEGER, edited_at INTEGER,
+  deleted_at INTEGER, deleted_by TEXT);
+CREATE INDEX IF NOT EXISTS idx_exp_day ON expenses(spent_on);
 `);
 
 // upgrades for databases created by an earlier version
 for (const col of ["ALTER TABLE kots ADD COLUMN client_id TEXT", "ALTER TABLE kots ADD COLUMN kind TEXT DEFAULT 'order'", "ALTER TABLE kots ADD COLUMN payload TEXT",
-  "ALTER TABLE kots ADD COLUMN ready_at INTEGER", "ALTER TABLE kots ADD COLUMN served_at INTEGER",
+  "ALTER TABLE kots ADD COLUMN printed_at INTEGER", "ALTER TABLE kots ADD COLUMN ready_at INTEGER", "ALTER TABLE kots ADD COLUMN served_at INTEGER",
   "ALTER TABLE orders ADD COLUMN bill_issued_at INTEGER", "ALTER TABLE orders ADD COLUMN pay_confirm TEXT", "ALTER TABLE orders ADD COLUMN pay_confirm_at INTEGER",
   "ALTER TABLE orders ADD COLUMN pay_fixed_from TEXT", "ALTER TABLE orders ADD COLUMN pay_fixed_reason TEXT", "ALTER TABLE orders ADD COLUMN pay_fixed_at INTEGER",
   "ALTER TABLE orders ADD COLUMN pay_cash INTEGER", "ALTER TABLE orders ADD COLUMN pay_online INTEGER"]) {
@@ -82,6 +87,27 @@ if (db.prepare('SELECT COUNT(*) c FROM menu').get().c === 0) {
     }
   })();
   console.log('Menu loaded:', db.prepare('SELECT COUNT(*) c FROM menu').get().c, 'rows');
+}
+
+// one-time menu updates (see menu-updates.js)
+db.exec('CREATE TABLE IF NOT EXISTS migrations(id TEXT PRIMARY KEY, at INTEGER)');
+for (const u of require('./menu-updates')) {
+  if (db.prepare('SELECT 1 FROM migrations WHERE id=?').get(u.id)) continue;
+  db.transaction(() => {
+    let changed = 0, kept = 0, added = 0;
+    for (const [name, variant, from, to] of u.prices || []) {
+      const r = db.prepare('UPDATE menu SET price=? WHERE name=? AND variant=? AND price=?').run(to, name, variant, from);
+      if (r.changes) changed++; else kept++;
+    }
+    for (const [cat, cathi, name, namehi, variant, varianthi, price] of u.add || []) {
+      if (db.prepare('SELECT 1 FROM menu WHERE name=? AND variant=?').get(name, variant)) continue;
+      const sort = db.prepare('SELECT COALESCE(MAX(sort),0)+1 s FROM menu').get().s;
+      db.prepare('INSERT INTO menu(category,category_hi,name,name_hi,variant,variant_hi,price,sort) VALUES (?,?,?,?,?,?,?,?)').run(cat, cathi, name, namehi, variant, varianthi, price, sort);
+      added++;
+    }
+    db.prepare('INSERT INTO migrations(id,at) VALUES (?,?)').run(u.id, Date.now());
+    console.log(`Menu update ${u.id}: ${changed} rates changed, ${kept} left as they were, ${added} items added`);
+  })();
 }
 
 // ---------- helpers ----------
@@ -379,7 +405,7 @@ app.post('/api/items/:id/void-decision', need('owner'), h((req, res) => {
   res.json({ order: loadOrder(it.order_id) });
 }));
 app.get('/api/voids', need('owner'), h((req, res) => {
-  const q = `SELECT i.id,i.order_id,i.name,i.variant,i.qty,i.price,i.status,i.void_reason,i.void_by,i.void_at,o.day_no,o.type,o.table_no
+  const q = `SELECT i.id,i.order_id,i.name,i.name_hi,i.variant,i.variant_hi,i.qty,i.price,i.status,i.void_reason,i.void_by,i.void_at,o.day_no,o.type,o.table_no
              FROM order_items i JOIN orders o ON o.id=i.order_id`;
   if (req.query.pending) return res.json(db.prepare(q + " WHERE i.status='void_requested' ORDER BY i.void_at").all());
   const [s, e] = dayRange(req.query.date || localDate(Date.now()));
@@ -518,6 +544,25 @@ app.get('/api/kitchen', need('kitchen', 'counter', 'owner'), h((req, res) => {
     done: done.map(r => loadKot(r.id)).filter(k => k.items.length),
   });
 }));
+// kitchen slips: the counter prints one per ticket. A slip is "claimed" before printing so it never prints twice,
+// even if the counter page is reloaded or open on two screens. A failed print gives the claim back.
+app.get('/api/kots/unprinted', need('counter', 'owner'), h((req, res) => {
+  const ids = db.prepare(`SELECT k.id FROM kots k JOIN orders o ON o.id=k.order_id WHERE k.printed_at IS NULL AND k.created_at>?
+    AND o.status!='cancelled' ORDER BY k.id`).all(Date.now() - 20 * 60000);
+  res.json(ids.map(r => loadKot(r.id)).filter(k => k.items.length).map(k => ({ ...k, order: { ...k.order } })));
+}));
+app.post('/api/kots/:id/claim', need('counter', 'owner'), h((req, res) => {
+  const id = int(req.params.id);
+  if (!db.prepare('SELECT 1 FROM kots WHERE id=?').get(id)) bad('Not found', 404);
+  const force = !!(req.body && req.body.force);
+  const r = db.prepare('UPDATE kots SET printed_at=? WHERE id=? AND printed_at IS NULL').run(Date.now(), id);
+  if (!r.changes && !force) bad('Already printed', 409);
+  res.json(loadKot(id));
+}));
+app.post('/api/kots/:id/unclaim', need('counter', 'owner'), h((req, res) => {
+  db.prepare('UPDATE kots SET printed_at=NULL WHERE id=?').run(int(req.params.id));
+  res.json({ ok: true });
+}));
 app.post('/api/kots/:id/ready', need('kitchen', 'counter', 'owner'), h((req, res) => {
   const id = int(req.params.id);
   const k = db.prepare('SELECT order_id, kind FROM kots WHERE id=?').get(id);
@@ -555,6 +600,88 @@ app.get('/api/popular', need('waiter', 'counter', 'owner'), (req, res) => {
   res.json(rows.reduce((s, r) => s + r.q, 0) >= 20 ? rows.map(r => r.name) : []);
 });
 
+// ---------- spends (daily expenses) ----------
+const EXP_CATS = ['Vegetables', 'Dairy', 'Ration and grocery', 'Meat and fish', 'Gas and fuel', 'Salary and wages', 'Rent',
+  'Electricity and water', 'Packaging', 'Repairs', 'Marketing', 'Other'];
+const EXP_FROM = ['cash', 'upi', 'bank', 'partner'];
+const money = v => Math.round(Number(v) * 100) / 100;
+const expRow = (r, role) => ({
+  id: r.id, spent_on: r.spent_on, category: r.category, item: r.item, qty: r.qty, unit: r.unit, amount: r.amount,
+  paid_from: r.paid_from, paid_by: r.paid_by, supplier: r.supplier, note: r.note, created_by: r.created_by, created_at: r.created_at,
+  edited_at: r.edited_at, can_delete: role === 'owner' || (r.created_by === role && Date.now() - r.created_at < 60 * 60000), can_edit: role === 'owner',
+});
+function expInput(b, role, existing) {
+  const today = localDate(Date.now());
+  const spent_on = b.spent_on || (existing ? existing.spent_on : today);
+  dayRange(spent_on);
+  if (spent_on > today) bad('That date is in the future');
+  if (role !== 'owner' && spent_on < localDate(Date.now() - 86400000)) bad('The counter can add spends for today or yesterday only');
+  const amount = money(b.amount);
+  if (!(amount > 0) || amount > 10000000) bad('Enter the amount spent');
+  const item = String(b.item || '').trim().slice(0, 80);
+  if (!item) bad('Enter what was bought');
+  const category = EXP_CATS.includes(b.category) ? b.category : 'Other';
+  const paid_from = EXP_FROM.includes(b.paid_from) ? b.paid_from : bad('Choose how it was paid');
+  const paid_by = paid_from === 'partner' ? String(b.paid_by || '').trim().slice(0, 40) : '';
+  if (paid_from === 'partner' && !paid_by) bad('Enter which partner paid');
+  const qty = b.qty === '' || b.qty == null ? null : Number(b.qty);
+  if (qty != null && !(qty > 0 && qty < 1000000)) bad('Quantity is not valid');
+  return { spent_on, category, item, qty, unit: qty == null ? '' : String(b.unit || '').slice(0, 12), amount, paid_from, paid_by,
+    supplier: String(b.supplier || '').trim().slice(0, 60), note: String(b.note || '').trim().slice(0, 200) };
+}
+app.get('/api/expenses', need('counter', 'owner'), h((req, res) => {
+  const date = req.query.date || localDate(Date.now());
+  dayRange(date);
+  const rows = db.prepare('SELECT * FROM expenses WHERE spent_on=? AND deleted_at IS NULL ORDER BY created_at DESC').all(date);
+  const by = {}, src = { cash: 0, upi: 0, bank: 0, partner: 0 };
+  let total = 0;
+  for (const r of rows) { total += r.amount; src[r.paid_from] = (src[r.paid_from] || 0) + r.amount; by[r.category] = (by[r.category] || 0) + r.amount; }
+  res.json({ date, categories: EXP_CATS, items: rows.map(r => expRow(r, req.role)), total: money(total),
+    by_category: Object.entries(by).map(([category, t]) => ({ category, total: money(t) })).sort((a, b) => b.total - a.total),
+    by_source: Object.fromEntries(Object.entries(src).map(([k, v]) => [k, money(v)])) });
+}));
+// what is bought most often lately, so a regular purchase is two taps
+app.get('/api/expenses/recent', need('counter', 'owner'), h((req, res) => {
+  const since = localDate(Date.now() - 45 * 86400000);
+  const rows = db.prepare(`SELECT category, item, unit, supplier, COUNT(*) n, MAX(id) last_id FROM expenses
+    WHERE spent_on>=? AND deleted_at IS NULL GROUP BY category, item, unit ORDER BY n DESC, last_id DESC LIMIT 16`).all(since);
+  const last = db.prepare('SELECT qty, amount, paid_from, paid_by FROM expenses WHERE id=?');
+  const partners = db.prepare("SELECT DISTINCT paid_by FROM expenses WHERE paid_from='partner' AND paid_by!='' AND deleted_at IS NULL LIMIT 8").all().map(r => r.paid_by);
+  const suppliers = db.prepare("SELECT DISTINCT supplier FROM expenses WHERE supplier!='' AND deleted_at IS NULL ORDER BY id DESC LIMIT 20").all().map(r => r.supplier);
+  res.json({ items: rows.map(r => ({ category: r.category, item: r.item, unit: r.unit, supplier: r.supplier, ...last.get(r.last_id) })), partners, suppliers });
+}));
+app.post('/api/expenses', need('counter', 'owner'), h((req, res) => {
+  const e = expInput(req.body || {}, req.role);
+  const r = db.prepare(`INSERT INTO expenses(spent_on,category,item,qty,unit,amount,paid_from,paid_by,supplier,note,created_by,created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(e.spent_on, e.category, e.item, e.qty, e.unit, e.amount, e.paid_from, e.paid_by, e.supplier, e.note, req.role, Date.now());
+  res.json(expRow(db.prepare('SELECT * FROM expenses WHERE id=?').get(r.lastInsertRowid), req.role));
+}));
+app.put('/api/expenses/:id', need('owner'), h((req, res) => {
+  const old = db.prepare('SELECT * FROM expenses WHERE id=? AND deleted_at IS NULL').get(int(req.params.id));
+  if (!old) bad('Entry not found', 404);
+  const e = expInput(req.body || {}, req.role, old);
+  db.prepare(`UPDATE expenses SET spent_on=?,category=?,item=?,qty=?,unit=?,amount=?,paid_from=?,paid_by=?,supplier=?,note=?,edited_at=? WHERE id=?`)
+    .run(e.spent_on, e.category, e.item, e.qty, e.unit, e.amount, e.paid_from, e.paid_by, e.supplier, e.note, Date.now(), old.id);
+  res.json(expRow(db.prepare('SELECT * FROM expenses WHERE id=?').get(old.id), req.role));
+}));
+app.delete('/api/expenses/:id', need('counter', 'owner'), h((req, res) => {
+  const old = db.prepare('SELECT * FROM expenses WHERE id=? AND deleted_at IS NULL').get(int(req.params.id));
+  if (!old) bad('Entry not found', 404);
+  if (!expRow(old, req.role).can_delete) bad('Only the owner can remove this entry now', 403);
+  db.prepare('UPDATE expenses SET deleted_at=?, deleted_by=? WHERE id=?').run(Date.now(), req.role, old.id);
+  res.json({ ok: true });
+}));
+app.get('/api/expenses.csv', need('owner'), h((req, res) => {
+  const from = req.query.from || localDate(Date.now()), to = req.query.to || from;
+  dayRange(from); dayRange(to);
+  const rows = db.prepare('SELECT * FROM expenses WHERE spent_on>=? AND spent_on<=? AND deleted_at IS NULL ORDER BY spent_on, id').all(from, to);
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const FROM = { cash: 'Cash from counter', upi: 'UPI', bank: 'Bank', partner: 'Partner paid' };
+  const lines = [['Date', 'Category', 'Item', 'Quantity', 'Unit', 'Amount', 'Paid from', 'Partner', 'Supplier', 'Note', 'Entered by'].join(',')];
+  for (const r of rows) lines.push([r.spent_on, r.category, r.item, r.qty ?? '', r.unit, r.amount, FROM[r.paid_from] || r.paid_from, r.paid_by, r.supplier, r.note, r.created_by].map(q).join(','));
+  res.set('Content-Type', 'text/csv; charset=utf-8').set('Content-Disposition', `attachment; filename="baithak-spends-${from}-to-${to}.csv"`).send('﻿' + lines.join('\r\n'));
+}));
+
 // ---------- stats ----------
 function dayStats(dateStr) {
   const [s, e] = dayRange(dateStr);
@@ -572,7 +699,7 @@ function dayStats(dateStr) {
     FROM orders WHERE status='paid' AND paid_at>=? AND paid_at<?`).get(s, e);
   const hourly = db.prepare(`SELECT CAST(strftime('%H', created_at/1000 + ?, 'unixepoch') AS INTEGER) hour, COUNT(*) orders
     FROM orders WHERE created_at>=? AND created_at<? AND status!='cancelled' GROUP BY hour ORDER BY hour`).all(offs, s, e);
-  const top = db.prepare(`SELECT i.name, i.variant, SUM(i.qty) qty, SUM(i.qty*i.price) revenue
+  const top = db.prepare(`SELECT i.name, i.variant, MIN(i.name_hi) name_hi, MIN(i.variant_hi) variant_hi, SUM(i.qty) qty, SUM(i.qty*i.price) revenue
     FROM order_items i JOIN orders o ON o.id=i.order_id
     WHERE o.created_at>=? AND o.created_at<? AND i.status!='voided' AND o.status!='cancelled'
     GROUP BY i.name, i.variant ORDER BY qty DESC, revenue DESC LIMIT 10`).all(s, e);
@@ -580,11 +707,15 @@ function dayStats(dateStr) {
     WHERE o.created_at>=? AND o.created_at<? AND i.status!='voided' AND o.status!='cancelled'`).get(s, e).n;
   const voids = db.prepare(`SELECT COUNT(*) count, COALESCE(SUM(price*qty),0) value FROM order_items WHERE status='voided' AND void_at>=? AND void_at<?`).get(s, e);
   const pending = db.prepare("SELECT COUNT(*) c FROM order_items WHERE status='void_requested'").get().c;
+  const spend = db.prepare(`SELECT COUNT(*) count, COALESCE(SUM(amount),0) total,
+      COALESCE(SUM(CASE WHEN paid_from='cash' THEN amount END),0) cash FROM expenses WHERE spent_on=? AND deleted_at IS NULL`).get(dateStr);
+  spend.top = db.prepare(`SELECT category, SUM(amount) total FROM expenses WHERE spent_on=? AND deleted_at IS NULL
+      GROUP BY category ORDER BY total DESC LIMIT 1`).get(dateStr) || null;
   return {
     date: dateStr,
     orders: { total: orders.total || 0, dine_in: orders.dine_in || 0, takeaway: orders.takeaway || 0, open: orders.open || 0, paid: orders.paid || 0, cancelled },
     sales: { ...sales, avg_bill: sales.bills ? Math.round(sales.total / sales.bills) : 0 },
-    hourly, top_items: top, items_sold: itemsSold, voids: { ...voids, pending },
+    hourly, top_items: top, items_sold: itemsSold, voids: { ...voids, pending }, spend,
   };
 }
 app.get('/api/stats', need('owner'), h((req, res) => res.json(dayStats(req.query.date || localDate(Date.now())))));
@@ -598,8 +729,10 @@ app.get('/api/stats/range', need('owner'), h((req, res) => {
     WHERE created_at>=? AND status!='cancelled' GROUP BY d`).all(offs, from);
   const s = db.prepare(`SELECT date(paid_at/1000+?, 'unixepoch') d, SUM(total) sales FROM orders
     WHERE status='paid' AND paid_at>=? GROUP BY d`).all(offs, from);
+  const sp = db.prepare("SELECT spent_on d, SUM(amount) spend FROM expenses WHERE spent_on>=? AND deleted_at IS NULL GROUP BY d").all(localDate(from + 3600000));
   const map = {};
-  for (let i = 0; i < days; i++) { const d = localDate(from + i * 86400000 + 3600000); map[d] = { date: d, orders: 0, sales: 0 }; }
+  for (let i = 0; i < days; i++) { const d = localDate(from + i * 86400000 + 3600000); map[d] = { date: d, orders: 0, sales: 0, spend: 0 }; }
+  sp.forEach(r => { if (map[r.d]) map[r.d].spend = r.spend; });
   o.forEach(r => { if (map[r.d]) map[r.d].orders = r.orders; });
   s.forEach(r => { if (map[r.d]) map[r.d].sales = r.sales; });
   res.json(Object.values(map));
@@ -665,6 +798,7 @@ app.get('/waiter', page(['waiter', 'counter', 'owner'], 'waiter.html', 'waiter')
 app.get('/kitchen', page(['kitchen', 'counter', 'owner'], 'kitchen.html', 'kitchen'));
 app.get('/counter', page(['counter', 'owner'], 'counter.html', 'admin'));
 app.get('/owner', page(['owner'], 'owner.html', 'admin'));
+app.get('/spends', page(['counter', 'owner'], 'spends.html', 'admin'));
 app.use('/assets/fonts', express.static(path.join(__dirname, 'public', 'assets', 'fonts'), { maxAge: '30d', immutable: true }));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets'), { maxAge: 0 })); // always re-checked, so an update shows up at once
 

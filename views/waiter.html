@@ -161,7 +161,7 @@
   <a class="brand" id="brand"><img src="/assets/brand/mark-cream.png" alt="" width="38" height="38"><span><i class="the">The </i>Baithak Stories</span></a>
   <h1 id="title" class="hi-display hidden"></h1>
   <div class="icons">
-    <a id="toCounter" href="/counter" class="hidden">काउंटर</a>
+    <a id="toCounter" href="/counter" class="hidden nav-out">काउंटर</a>
     <button class="iconbtn" data-look-btn aria-label="रंग-रूप बदलें"></button>
     <button class="iconbtn" data-theme-btn aria-label="थीम बदलें"></button>
     <button class="iconbtn" id="logoutBtn" aria-label="बाहर जाएँ"></button>
@@ -193,6 +193,7 @@ const count = () => Object.values(cart).reduce((a, b) => a + b, 0);
 const cartTotal = () => Object.entries(cart).reduce((s, [id, n]) => s + ((byId(+id) || {}).price || 0) * n, 0);
 const mins = ms => Math.max(1, Math.round((Date.now() - ms) / 60000));
 const lineName = i => i.name_hi + (i.variant_hi ? ' (' + i.variant_hi + ')' : '');
+const enName = i => i.name + (i.variant ? ' ' + i.variant : '');
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 const title = () => cur.type === 'dine_in' ? 'टेबल ' + cur.table_no : 'पार्सल' + (curOrder() ? ' #' + curOrder().day_no : '');
@@ -416,7 +417,7 @@ function slipHtml(inline) {
   if (ids.length) {
     h += '<div class="sub-h first">भेजना बाकी</div><div class="slip">' + ids.map(id => {
       const m = byId(id);
-      return `<div class="ln"><div class="nm"><b>${esc(lineName(m))}</b><small>${rupee(m.price)}</small></div>
+      return `<div class="ln"><div class="nm"><b>${esc(lineName(m))}</b><small>${esc(enName(m))} · ${rupee(m.price)}</small></div>
         <span class="step"><button data-c="dec" data-id="${id}" aria-label="एक कम करें">−</button><b>${cart[id]}</b><button data-c="add" data-id="${id}" aria-label="एक बढ़ाएँ">+</button></span>
         <span class="amt">${rupee(m.price * cart[id])}</span>
         <button class="del" data-c="del" data-id="${id}" aria-label="${esc(m.name_hi)} हटाएँ">${ICON.trash}</button></div>`;
@@ -433,7 +434,7 @@ function slipHtml(inline) {
     h += '<div class="sub-h">किचन को भेजा जा चुका</div><div class="slip">' + o.items.map(i => {
       const gone = i.status === 'voided';
       return `<div class="ln ${gone ? 'gone' : ''}"><div class="nm"><b>${i.qty} × ${esc(lineName(i))}</b>
-        <small>${timeStr(i.created_at)}</small>${i.status === 'void_requested' ? ' <span class="st">मालिक की मंज़ूरी बाकी</span>' : ''}${gone ? ' <span class="st">हटाया गया</span>' : ''}</div>
+        <small>${esc(enName(i))} · ${timeStr(i.created_at)}</small>${i.status === 'void_requested' ? ' <span class="st">मालिक की मंज़ूरी बाकी</span>' : ''}${gone ? ' <span class="st">हटाया गया</span>' : ''}</div>
         <span class="amt">${rupee(i.qty * i.price)}</span>
         ${i.status === 'active' ? `<button class="danger rm" data-rm="${i.id}">हटाएँ</button>` : ''}</div>`;
     }).join('') + `</div><div class="sumrow"><span>अब तक का बिल</span><span>${rupee(o.running_total)}</span></div>`;

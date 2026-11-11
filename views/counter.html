@@ -45,6 +45,8 @@
  .awaitbox .ab button{min-height:46px}
  .awaitbox .ab .wide,.paybtns .wide{grid-column:1/-1}
  .empty{padding:28px 8px;color:var(--muted)}
+ #panel{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:var(--paper)}
+ #panel iframe{flex:1;width:100%;border:0;background:var(--paper)}
 </style>
 </head>
 <body>
@@ -53,9 +55,11 @@
   <div class="tools">
     <button id="prn" class="pbtn">Printer: not connected</button>
     <label class="toggle"><input type="checkbox" id="auto"> Auto-print bill</label>
-    <a href="/kitchen">Kitchen</a>
-    <a href="/waiter">New order</a>
-    <a id="ownerLink" href="/owner" class="hidden">Dashboard</a>
+    <label class="toggle"><input type="checkbox" id="slips"> Kitchen slips</label>
+    <a href="/kitchen" data-panel>Kitchen</a>
+    <a href="/spends" data-panel>Spends</a>
+    <a href="/waiter" data-panel>New order</a>
+    <a id="ownerLink" href="/owner" class="hidden" data-panel>Dashboard</a>
   </div>
   <div class="icons">
     <button class="iconbtn" data-look-btn aria-label="Change look"></button>
@@ -66,6 +70,7 @@
 <main>
   <div class="layout">
     <div>
+      <div id="slipBanner" class="awaitbox hidden" role="alert"></div>
       <div id="await"></div>
       <h2>Open orders<small id="openCount"></small></h2>
       <p class="muted" style="margin:-6px 2px 12px;font-size:14px">Every order sent by a waiter shows up here by itself. Open it to print the bill.</p>
@@ -76,6 +81,10 @@
     <div id="detail"><div class="card empty">Pick an order from the list to see its items and take payment.</div></div>
   </div>
 </main>
+<div id="panel" class="hidden" role="dialog" aria-modal="true" aria-label="Screen">
+  <header class="bar"><button id="panelBack" class="ghost" style="color:var(--bar-ink);font-weight:600">‹ Back to counter</button><h1 id="panelTitle"></h1></header>
+  <iframe id="panelFrame" title="Screen"></iframe>
+</div>
 <div id="toast"></div>
 <script src="/assets/common.js?v={{v}}"></script>
 <script src="/assets/printer.js?v={{v}}"></script>
@@ -85,10 +94,10 @@ let ME, OPEN = [], PAID = [], sel = null;
 const $ = s => document.querySelector(s);
 const label = o => o.type === 'dine_in' ? 'Table ' + o.table_no : 'Parcel #' + o.day_no + (o.customer ? ' · ' + o.customer : '');
 const mins = ms => Math.max(1, Math.round((Date.now() - ms) / 60000));
-const nm = i => i.name_hi + (i.variant_hi ? ' (' + i.variant_hi + ')' : '') + ' · ' + i.name + (i.variant ? ' ' + i.variant : '');
+const nm = i => i.name + (i.variant ? ' (' + i.variant + ')' : '') + (i.name_hi && i.name_hi !== i.name ? ' · ' + i.name_hi + (i.variant_hi ? ' (' + i.variant_hi + ')' : '') : '');
 const REASONS = ['Customer refused', 'Wrong entry', 'Item not available', 'Too late'];
-let autoPrint = true;
-try { autoPrint = localStorage.getItem('autoPrint') !== '0'; } catch (e) {}
+let autoPrint = true, slipsOn = true;
+try { autoPrint = localStorage.getItem('autoPrint') !== '0'; slipsOn = localStorage.getItem('slips') !== '0'; } catch (e) {}
 
 // ---------- printing (80mm thermal; Chrome shortcut with --kiosk-printing skips the print dialog) ----------
 let printQueue = Promise.resolve();
@@ -135,6 +144,64 @@ function billHtml(o) {
     <tr class="tot"><td>TOTAL</td><td class="r">₹${total}</td></tr>
     ${o.pay_mode === 'split' ? `<tr><td>Paid: Cash</td><td class="r">${o.pay_cash}</td></tr><tr><td>Paid: Online</td><td class="r">${o.pay_online}</td></tr>` : o.pay_mode ? `<tr><td>Paid by</td><td class="r">${o.pay_mode.toUpperCase()}</td></tr>` : ''}</table><hr>
     <div class="c">धन्यवाद! फिर पधारें<br>Thank you, visit again</div>`;
+}
+// ---------- kitchen slips: a small token for the cooks, printed when the waiter sends an order ----------
+const SLIP_FEED = 3;                                  // blank lines after a slip; raise to 4 if the text is cut when you tear it
+function slipHtml(k) {
+  const o = k.order, cancel = k.kind === 'cancel';
+  const where = o.type === 'dine_in' ? 'टेबल ' + o.table_no : 'पार्सल #' + o.day_no + (o.customer ? ' ' + esc(o.customer) : '');
+  const tag = cancel ? '<span style="background:#000;color:#fff;font-size:22px;font-weight:700;padding:0 6px;margin-left:6px">रद्द</span>'
+    : k.is_add ? '<span style="font-size:22px;font-weight:700;margin-left:6px">+ जोड़ा</span>' : '';
+  const lines = k.items.map(i => `<div style="font-size:26px;font-weight:700;line-height:1.15">${i.qty} × ${esc(i.name_hi || i.name)}${i.variant_hi || i.variant ? ' <span style="font-size:21px;font-weight:400">(' + esc(i.variant_hi || i.variant) + ')</span>' : ''}</div>`).join('');
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #000;padding-bottom:1px;margin-bottom:2px;line-height:1.1">
+      <span><span style="font-size:32px;font-weight:700">${where}</span>${tag}</span><span style="font-size:19px">${timeStr(k.created_at).replace(' ', '')}</span></div>
+    ${lines}${k.note ? `<div style="font-size:20px;line-height:1.15;margin-top:2px">नोट: ${esc(k.note)}</div>` : ''}`;
+}
+// Other screens open on top of this one instead of replacing it. Leaving this page would drop the Bluetooth link to the printer.
+function openPanel(url, title) {
+  $('#panelTitle').textContent = title;
+  $('#panelFrame').contentWindow.location.replace(url + (url.includes('?') ? '&' : '?') + 'embed=1'); // replace(), so the browser's Back button is not used up by the frame
+  $('#panel').classList.remove('hidden'); document.body.style.overflow = 'hidden';
+  try { history.pushState({ panel: 1 }, ''); } catch (e) {}
+}
+function closePanel() {
+  if ($('#panel').classList.contains('hidden')) return;
+  $('#panel').classList.add('hidden'); $('#panelFrame').contentWindow.location.replace('about:blank'); document.body.style.overflow = '';
+  loadAll().catch(() => {}); printSlips();
+}
+window.addEventListener('popstate', closePanel);
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-panel]');
+  if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+  e.preventDefault(); openPanel(a.getAttribute('href'), a.textContent.trim());
+});
+$('#panelBack').onclick = () => { if (history.state && history.state.panel) history.back(); else closePanel(); };
+let slipBusy = false, slipAgain = false;
+async function printSlips() {
+  if (!slipsOn) { showSlipBanner(0); return; }
+  if (slipBusy) { slipAgain = true; return; }
+  slipBusy = true;
+  try {
+    do {
+      slipAgain = false;
+      const list = await api('/api/kots/unprinted');
+      if (!PRINTER.connected) { showSlipBanner(list.length); break; }
+      showSlipBanner(0);
+      for (const k of list) {
+        let got;
+        try { got = await api(`/api/kots/${k.id}/claim`, { body: {} }); } catch (e) { if (e.status === 409) continue; throw e; } // another screen has it
+        try { await PRINTER.print(slipHtml(got), { feed: SLIP_FEED }); }
+        catch (e) { await api(`/api/kots/${k.id}/unclaim`, { body: {} }).catch(() => {}); toast('Kitchen slip did not print: ' + e.message, true); showSlipBanner(-1); return; }
+      }
+    } while (slipAgain);
+  } catch (e) { if (e.message !== 'login') console.warn(e); }
+  finally { slipBusy = false; }
+}
+function showSlipBanner(n) {
+  const b = $('#slipBanner'); if (!b) return;
+  b.classList.toggle('hidden', n === 0);
+  if (n !== 0) b.innerHTML = `<b>${n > 0 ? n + ' kitchen slip' + (n > 1 ? 's' : '') + ' waiting.' : 'A kitchen slip did not print.'}</b> ${PRINTER.connected ? 'Check the paper and the printer, then tap Retry.' : 'Connect the printer and they will print.'}
+    <button id="slipGo" class="primary" style="margin-left:8px;min-height:40px">${PRINTER.connected ? 'Retry' : 'Connect printer'}</button>`;
 }
 // one place decides how to print: straight to the connected printer, otherwise the normal browser print
 async function printOut(html, opts) {
@@ -306,7 +373,7 @@ function renderDetail() {
   let html = `<div class="card det"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h2>${esc(label(o))}</h2>
     <span class="muted">Order #${o.day_no}, ${timeStr(o.created_at)}${o.bill_no ? ', bill ' + o.bill_no : ''}</span></div>`;
   o.kots.forEach(k => {
-    html += `<div class="kothead">Sent ${timeStr(k.created_at)}${k.note ? ' – note: ' + esc(k.note) : ''} ${k.ready_at ? '<span class="badge green">Ready ' + timeStr(k.ready_at) + '</span>' : (o.items.some(i => i.kot_id === k.id && i.status !== 'voided') ? '<span class="badge">In kitchen</span>' : '')}</div>`;
+    html += `<div class="kothead">Sent ${timeStr(k.created_at)}${o.items.some(i => i.kot_id === k.id && i.status !== 'voided') ? ` <button class="ghost" style="min-height:30px;padding:0 8px" data-reslip="${k.id}">Reprint slip</button>` : ''}${k.note ? ' – note: ' + esc(k.note) : ''} ${k.ready_at ? '<span class="badge green">Ready ' + timeStr(k.ready_at) + '</span>' : (o.items.some(i => i.kot_id === k.id && i.status !== 'voided') ? '<span class="badge">In kitchen</span>' : '')}</div>`;
     o.items.filter(i => i.kot_id === k.id).forEach(i => {
       const gone = i.status === 'voided';
       html += `<div class="line ${gone ? 'gone' : ''}"><span>${i.qty} × ${esc(nm(i))}
@@ -334,6 +401,14 @@ function renderDetail() {
 
 document.addEventListener('click', async e => {
   const t = e.target;
+  const rs = t.closest('[data-reslip]');
+  if (rs) {
+    if (!PRINTER.connected) return toast('Connect the printer first', true);
+    try { const got = await api(`/api/kots/${rs.dataset.reslip}/claim`, { body: { force: true } }); await PRINTER.print(slipHtml(got), { feed: SLIP_FEED }); toast('Slip printed'); }
+    catch (x) { toast(x.message, true); }
+    return;
+  }
+  if (t.closest('#slipGo')) { if (PRINTER.connected) printSlips(); else printerMenu(); return; }
   const qb = t.closest('[data-qbill]');
   if (qb) {
     const bo = OPEN.find(x => x.id === +qb.dataset.qbill);
@@ -382,9 +457,14 @@ async function init() {
   $('#prn').onclick = printerMenu; PRINTER.onChange(showPrinter); showPrinter(); PRINTER.autoReconnect();
   const cb = $('#auto'); cb.checked = autoPrint;
   cb.onchange = () => { autoPrint = cb.checked; try { localStorage.setItem('autoPrint', autoPrint ? '1' : '0'); } catch (e) {} };
+  const sc = $('#slips'); sc.checked = slipsOn;
+  sc.onchange = () => { slipsOn = sc.checked; try { localStorage.setItem('slips', slipsOn ? '1' : '0'); } catch (e) {} printSlips(); };
+  PRINTER.onChange(() => printSlips());
   CHIME.armOnFirstTouch();
   await loadAll();
+  printSlips();
   live(async ev => {
+    if (ev.type === 'kot') printSlips();
     await loadAll();
     if (ev.type === 'kot' && ev.kind !== 'cancel') {
       const o = OPEN.find(x => x.id === ev.order_id);
@@ -396,7 +476,7 @@ async function init() {
       if (o) toast(label(o) + ': food is ready');
     }
   });
-  setInterval(() => { if (!document.hidden) { loadAll().catch(() => {}); } }, 30000);
+  setInterval(() => { if (!document.hidden) { loadAll().catch(() => {}); printSlips(); } }, 30000);
 }
 init().catch(e => { if (e.message !== 'login') toast(e.message, true); });
 </script>

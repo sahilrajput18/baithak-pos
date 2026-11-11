@@ -66,11 +66,12 @@ const PRINTER = (() => {
     }
     throw last;
   }
+  const onGattDrop = () => { mode = null; notify(); };
   async function connectBle() {
     needSecure('Bluetooth printing');
     if (!navigator.bluetooth) throw new Error('This browser does not support Bluetooth printing. Use Chrome or Edge on the laptop.');
     device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: services() });
-    device.addEventListener('gattserverdisconnected', () => { mode = null; notify(); });
+    device.addEventListener('gattserverdisconnected', onGattDrop);
     chr = await findChar(await gattConnect(device));
     mode = 'ble'; name = device.name || 'Bluetooth printer'; notify();
   }
@@ -85,6 +86,17 @@ const PRINTER = (() => {
   }
   async function autoReconnect() { // serial ports remember permission; Bluetooth needs one tap per session
     try { if (navigator.serial) { const ps = await navigator.serial.getPorts(); if (ps.length) await openPort(ps[0]); } } catch (e) {}
+    // Bluetooth: newer Chrome can remember a printer you already picked, so a reload may reconnect without a tap
+    try {
+      if (!mode && navigator.bluetooth && navigator.bluetooth.getDevices) {
+        const d = (await navigator.bluetooth.getDevices())[0];
+        if (d) {
+          d.removeEventListener('gattserverdisconnected', onGattDrop); d.addEventListener('gattserverdisconnected', onGattDrop);
+          chr = await findChar(await gattConnect(d));
+          device = d; mode = 'ble'; name = d.name || 'Bluetooth printer'; notify();
+        }
+      }
+    } catch (e) { try { if (!mode) chr = null; } catch (x) {} }
   }
   async function disconnect() {
     try { if (writer) { writer.releaseLock(); await port.close(); } } catch (e) {}
@@ -167,14 +179,14 @@ const PRINTER = (() => {
       return { W, H, rowBytes, data };
     } finally { host.remove(); }
   }
-  function escpos(b) {
+  function escpos(b, feed) {
     const parts = [Uint8Array.of(0x1B, 0x40)]; // initialise
     for (let y = 0; y < b.H; y += 200) {         // GS v 0 raster image, in bands of 200 rows
       const n = Math.min(200, b.H - y);
       parts.push(Uint8Array.of(0x1D, 0x76, 0x30, 0x00, b.rowBytes & 255, b.rowBytes >> 8, n & 255, n >> 8));
       parts.push(b.data.subarray(y * b.rowBytes, (y + n) * b.rowBytes));
     }
-    parts.push(Uint8Array.of(0x1B, 0x64, 0x04)); // feed 4 lines so the ticket clears the tear bar
+    parts.push(Uint8Array.of(0x1B, 0x64, feed == null ? 4 : feed)); // feed a few lines so the ticket clears the tear bar
     const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
     let o = 0; parts.forEach(p => { out.set(p, o); o += p.length; });
     return out;
@@ -183,7 +195,7 @@ const PRINTER = (() => {
   function print(html, opts) {
     queue = queue.then(async () => {
       await ensureLink();
-      await writeBytes(escpos(await bitmap(html, opts)));
+      await writeBytes(escpos(await bitmap(html, opts), opts && opts.feed));
     });
     const mine = queue;
     queue = queue.catch(() => {}); // one failed print must not block the next ones
